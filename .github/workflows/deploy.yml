@@ -1,0 +1,16 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Trigger Render deploys
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy API
+        run: curl -fsS "${{ secrets.RENDER_DEPLOY_HOOK_API }}"
+
+      - name: Deploy Web
+        run: curl -fsS "${{ secrets.RENDER_DEPLOY_HOOK_WEB }}"

@@ -1,0 +1,33 @@
+services:
+  # ── API ────────────────────────────────────────────────────────────────────
+  - type: web
+    name: deckforge-api
+    env: docker
+    dockerfilePath: apps/api/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        value: https://deckforge.deancimatu.com
+
+  # ── Web (static site) ──────────────────────────────────────────────────────
+  - type: web
+    name: deckforge-web
+    env: static
+    buildCommand: corepack enable && corepack prepare pnpm@latest --activate && pnpm install --frozen-lockfile && pnpm --filter @deckforge/shared build && pnpm --filter @deckforge/web build
+    staticPublishPath: apps/web/dist
+    pullRequestPreviewsEnabled: true
+    envVars:
+      - key: VITE_API_BASE
+        value: https://deckforge-api.onrender.com

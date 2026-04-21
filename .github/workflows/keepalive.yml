@@ -1,0 +1,19 @@
+name: Keep-alive
+
+on:
+  schedule:
+    # Every 5 minutes — prevents Render free-tier spin-down
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Ping API health
+    runs-on: ubuntu-latest
+    steps:
+      - name: Health check
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            https://deckforge-api.onrender.com/health)
+          echo "Status: $STATUS"
+          [ "$STATUS" = "200" ] || exit 1

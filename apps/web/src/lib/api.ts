@@ -1,4 +1,6 @@
-const BASE = '/api';
+// In production the Vite build replaces VITE_API_BASE with the absolute API URL.
+// In local dev it falls back to '/api', which the Vite dev proxy forwards to :3001.
+const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '/api';
 
 export class ApiError extends Error {
   constructor(
