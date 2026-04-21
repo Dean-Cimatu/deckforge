@@ -125,6 +125,9 @@ export default function SourceDetailPage() {
 
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
             <SourceTypeBadge type={source.type} />
+            {source.type === 'images' && source.inputMeta.imageCount && (
+              <><span>·</span><span>{source.inputMeta.imageCount} slides</span></>
+            )}
             {deck && <><span>·</span><span>{deck.cardCount} cards</span></>}
             <span>·</span>
             <span>{relativeTime(source.createdAt)}</span>

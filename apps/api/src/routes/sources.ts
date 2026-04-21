@@ -10,6 +10,7 @@ import { ingestPdf } from '../ingest/pdf.js';
 import { ingestImage } from '../ingest/image.js';
 import { ingestYoutube, IngestError } from '../ingest/youtube.js';
 import { ingestUrl } from '../ingest/url.js';
+import { ingestImages } from '../ingest/images.js';
 import { Source } from '../models/Source.js';
 import { Deck } from '../models/Deck.js';
 import { Card } from '../models/Card.js';
@@ -193,6 +194,46 @@ sourcesRouter.post('/url', generateRateLimit, async (req, res, next) => {
     next(err);
   }
 });
+
+// ── POST /api/sources/images ──────────────────────────────────────────────────
+
+const imagesUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024, files: 10 },
+});
+
+sourcesRouter.post(
+  '/images',
+  generateRateLimit,
+  imagesUpload.array('files', 10),
+  async (req, res, next) => {
+    try {
+      const files = req.files as Express.Multer.File[] | undefined;
+      if (!files || files.length === 0) {
+        res.status(400).json({ error: 'No files uploaded' });
+        return;
+      }
+      const title = (req.body as { title?: string }).title;
+      const outputs: OutputType[] = parseOutputs(req.body);
+      const { title: derivedTitle, text, meta } = await ingestImages(files, title);
+      const userId = new mongoose.Types.ObjectId(req.user!.id);
+      const source = await createSource(userId, {
+        title: derivedTitle,
+        type: 'images',
+        inputMeta: { imageCount: meta.imageCount as number },
+      });
+      await Source.findByIdAndUpdate(source._id, { extractedText: text });
+
+      generateArtefacts(source._id, text, outputs).catch((err: unknown) => {
+        console.error('generateArtefacts failed for source', source._id.toString(), err);
+      });
+
+      res.status(201).json({ id: source._id.toString(), status: source.status });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // ── GET /api/sources/:id ──────────────────────────────────────────────────────
 

@@ -35,6 +35,8 @@ export function NewSourceModal({ open, onClose }: Props) {
 
   const [imgTitle, setImgTitle] = useState('');
   const [imgFile, setImgFile] = useState<File | null>(null);
+  const [imgFiles, setImgFiles] = useState<File[]>([]);
+  const [imgMultiple, setImgMultiple] = useState(false);
   const [imgOutputs, setImgOutputs] = useState({ flashcards: true, summary: true });
   const imgRef = useRef<HTMLInputElement>(null);
 
@@ -57,7 +59,7 @@ export function NewSourceModal({ open, onClose }: Props) {
   function close() {
     setTextTitle(''); setTextBody('');
     setPdfTitle(''); setPdfFile(null);
-    setImgTitle(''); setImgFile(null);
+    setImgTitle(''); setImgFile(null); setImgFiles([]); setImgMultiple(false);
     setYtTitle(''); setYtUrl(''); setYtUrlError('');
     setUrlTitle(''); setUrlHref('');
     onClose();
@@ -135,15 +137,26 @@ export function NewSourceModal({ open, onClose }: Props) {
   }
 
   async function submitImage() {
-    if (!imgFile) return;
-    const fd = new FormData();
-    fd.append('file', imgFile);
-    if (imgTitle) fd.append('title', imgTitle);
-    fd.append('outputs', JSON.stringify(outputsArray(imgOutputs)));
     try {
-      const res = await create.mutateAsync({ type: 'image', formData: fd });
-      close();
-      navigate(`/sources/${res.id}`);
+      if (imgMultiple) {
+        if (imgFiles.length === 0) return;
+        const fd = new FormData();
+        imgFiles.forEach((f) => fd.append('files', f));
+        if (imgTitle) fd.append('title', imgTitle);
+        fd.append('outputs', JSON.stringify(outputsArray(imgOutputs)));
+        const res = await create.mutateAsync({ type: 'images', formData: fd });
+        close();
+        navigate(`/sources/${res.id}`);
+      } else {
+        if (!imgFile) return;
+        const fd = new FormData();
+        fd.append('file', imgFile);
+        if (imgTitle) fd.append('title', imgTitle);
+        fd.append('outputs', JSON.stringify(outputsArray(imgOutputs)));
+        const res = await create.mutateAsync({ type: 'image', formData: fd });
+        close();
+        navigate(`/sources/${res.id}`);
+      }
     } catch {
       toast({ title: 'Failed to upload image', variant: 'destructive' });
     }
@@ -250,26 +263,72 @@ export function NewSourceModal({ open, onClose }: Props) {
                 className="mt-1"
               />
             </div>
-            <div>
-              <Label>Image file</Label>
-              <div
-                className="mt-1 flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-bg p-8 text-sm text-muted hover:border-accent transition-colors"
-                onClick={() => imgRef.current?.click()}
-              >
-                {imgFile ? imgFile.name : 'Click to choose an image (max 8 MB)'}
-              </div>
+            <label className="flex items-center gap-2 text-sm text-fg cursor-pointer">
               <input
-                ref={imgRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/heic"
-                className="hidden"
-                onChange={(e) => setImgFile(e.target.files?.[0] ?? null)}
+                type="checkbox"
+                checked={imgMultiple}
+                onChange={(e) => { setImgMultiple(e.target.checked); setImgFile(null); setImgFiles([]); }}
+                className="accent-accent"
               />
-            </div>
+              Select multiple (slide deck)
+            </label>
+            {imgMultiple ? (
+              <div>
+                <Label>Image files (up to 10)</Label>
+                <div
+                  className="mt-1 flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-bg p-6 text-sm text-muted hover:border-accent transition-colors"
+                  onClick={() => imgRef.current?.click()}
+                >
+                  {imgFiles.length > 0 ? `${imgFiles.length} files selected` : 'Click to choose images'}
+                </div>
+                {imgFiles.length > 0 && (
+                  <div className="mt-2 grid grid-cols-4 gap-2">
+                    {imgFiles.map((f, i) => (
+                      <div key={i} className="relative group">
+                        <img
+                          src={URL.createObjectURL(f)}
+                          alt={f.name}
+                          className="h-16 w-full rounded object-cover border border-border"
+                        />
+                        <button
+                          onClick={() => setImgFiles((prev) => prev.filter((_, j) => j !== i))}
+                          className="absolute -right-1 -top-1 hidden group-hover:flex h-5 w-5 items-center justify-center rounded-full bg-warn text-white text-xs"
+                        >×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input
+                  ref={imgRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/heic"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => setImgFiles(Array.from(e.target.files ?? []))}
+                />
+              </div>
+            ) : (
+              <div>
+                <Label>Image file</Label>
+                <div
+                  className="mt-1 flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-bg p-8 text-sm text-muted hover:border-accent transition-colors"
+                  onClick={() => imgRef.current?.click()}
+                >
+                  {imgFile ? imgFile.name : 'Click to choose an image (max 8 MB)'}
+                </div>
+                <input
+                  ref={imgRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/heic"
+                  className="hidden"
+                  onChange={(e) => setImgFile(e.target.files?.[0] ?? null)}
+                />
+              </div>
+            )}
             <OutputCheckboxes outputs={imgOutputs} onChange={setImgOutputs} />
             <Button
               onClick={submitImage}
-              disabled={!imgFile || busy}
+              disabled={(imgMultiple ? imgFiles.length === 0 : !imgFile) || busy}
               className="w-full"
             >
               {busy ? 'Generating…' : 'Generate'}
