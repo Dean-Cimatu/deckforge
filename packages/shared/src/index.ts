@@ -22,3 +22,4 @@ export type LoginInput = z.infer<typeof LoginInput>;
 export type AuthUser = z.infer<typeof AuthUser>;
 
 export * from './source';
+export * from './sm2';
