@@ -85,6 +85,7 @@ describe('listSources', () => {
   it('returns sources sorted newest first', async () => {
     const userId = uid();
     await createSource(userId, { title: 'First', type: 'text' });
+    await new Promise((r) => setTimeout(r, 5));
     await createSource(userId, { title: 'Second', type: 'pdf' });
 
     const { sources, total } = await listSources(userId);

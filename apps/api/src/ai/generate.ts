@@ -115,10 +115,13 @@ export async function generateArtefacts(
 
   const errors = [summaryError, cardsError].filter(Boolean).join('; ');
 
-  source.summary = summary;
-  source.status = allSucceeded ? 'ready' : 'partial';
-  source.generationError = errors || null;
-  await source.save();
+  await Source.findByIdAndUpdate(sourceId, {
+    $set: {
+      summary,
+      status: allSucceeded ? 'ready' : 'partial',
+      generationError: errors || null,
+    },
+  });
 
   if (cards && cards.length > 0) {
     const deck = await Deck.create({

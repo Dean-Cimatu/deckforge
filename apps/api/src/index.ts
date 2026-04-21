@@ -5,6 +5,8 @@ import cookieParser from 'cookie-parser';
 import { env } from './env.js';
 import { connectDB } from './db.js';
 import { authRouter } from './routes/auth.js';
+import { sourcesRouter } from './routes/sources.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 
@@ -18,6 +20,8 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRouter);
+app.use('/api/sources', sourcesRouter);
+app.use(errorHandler);
 
 connectDB()
   .then(() => {
