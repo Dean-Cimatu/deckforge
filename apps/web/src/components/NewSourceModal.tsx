@@ -1,0 +1,261 @@
+import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useCreateSource } from '@/hooks/useSources';
+import { useToast } from '@/hooks/use-toast';
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+}
+
+export function NewSourceModal({ open, onClose }: Props) {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const create = useCreateSource();
+
+  const [textTitle, setTextTitle] = useState('');
+  const [textBody, setTextBody] = useState('');
+  const [textOutputs, setTextOutputs] = useState({ flashcards: true, summary: true });
+
+  const [pdfTitle, setPdfTitle] = useState('');
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfOutputs, setPdfOutputs] = useState({ flashcards: true, summary: true });
+  const pdfRef = useRef<HTMLInputElement>(null);
+
+  const [imgTitle, setImgTitle] = useState('');
+  const [imgFile, setImgFile] = useState<File | null>(null);
+  const [imgOutputs, setImgOutputs] = useState({ flashcards: true, summary: true });
+  const imgRef = useRef<HTMLInputElement>(null);
+
+  function outputsArray(o: { flashcards: boolean; summary: boolean }) {
+    const arr: string[] = [];
+    if (o.flashcards) arr.push('flashcards');
+    if (o.summary) arr.push('summary');
+    return arr;
+  }
+
+  function close() {
+    setTextTitle(''); setTextBody('');
+    setPdfTitle(''); setPdfFile(null);
+    setImgTitle(''); setImgFile(null);
+    onClose();
+  }
+
+  async function submitText() {
+    if (!textBody.trim()) return;
+    try {
+      const res = await create.mutateAsync({
+        type: 'text',
+        body: {
+          title: textTitle || undefined,
+          text: textBody,
+          outputs: outputsArray(textOutputs),
+        },
+      });
+      close();
+      navigate(`/sources/${res.id}`);
+    } catch {
+      toast({ title: 'Failed to create source', variant: 'destructive' });
+    }
+  }
+
+  async function submitPdf() {
+    if (!pdfFile) return;
+    const fd = new FormData();
+    fd.append('file', pdfFile);
+    if (pdfTitle) fd.append('title', pdfTitle);
+    fd.append('outputs', JSON.stringify(outputsArray(pdfOutputs)));
+    try {
+      const res = await create.mutateAsync({ type: 'pdf', formData: fd });
+      close();
+      navigate(`/sources/${res.id}`);
+    } catch {
+      toast({ title: 'Failed to upload PDF', variant: 'destructive' });
+    }
+  }
+
+  async function submitImage() {
+    if (!imgFile) return;
+    const fd = new FormData();
+    fd.append('file', imgFile);
+    if (imgTitle) fd.append('title', imgTitle);
+    fd.append('outputs', JSON.stringify(outputsArray(imgOutputs)));
+    try {
+      const res = await create.mutateAsync({ type: 'image', formData: fd });
+      close();
+      navigate(`/sources/${res.id}`);
+    } catch {
+      toast({ title: 'Failed to upload image', variant: 'destructive' });
+    }
+  }
+
+  const busy = create.isPending;
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && close()}>
+      <DialogContent className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle>New source</DialogTitle>
+        </DialogHeader>
+
+        <Tabs defaultValue="text" className="mt-2">
+          <TabsList className="w-full">
+            <TabsTrigger value="text" className="flex-1">Text</TabsTrigger>
+            <TabsTrigger value="pdf" className="flex-1">PDF</TabsTrigger>
+            <TabsTrigger value="image" className="flex-1">Image</TabsTrigger>
+          </TabsList>
+
+          {/* Text tab */}
+          <TabsContent value="text" className="mt-4 space-y-4">
+            <div>
+              <Label htmlFor="text-title">Title (optional)</Label>
+              <Input
+                id="text-title"
+                value={textTitle}
+                onChange={(e) => setTextTitle(e.target.value)}
+                placeholder="e.g. Chapter 4 notes"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="text-body">Content</Label>
+              <textarea
+                id="text-body"
+                value={textBody}
+                onChange={(e) => setTextBody(e.target.value)}
+                placeholder="Paste your notes here..."
+                rows={8}
+                className="mt-1 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+              />
+            </div>
+            <OutputCheckboxes outputs={textOutputs} onChange={setTextOutputs} />
+            <Button
+              onClick={submitText}
+              disabled={!textBody.trim() || busy}
+              className="w-full"
+            >
+              {busy ? 'Generating…' : 'Generate'}
+            </Button>
+          </TabsContent>
+
+          {/* PDF tab */}
+          <TabsContent value="pdf" className="mt-4 space-y-4">
+            <div>
+              <Label htmlFor="pdf-title">Title (optional)</Label>
+              <Input
+                id="pdf-title"
+                value={pdfTitle}
+                onChange={(e) => setPdfTitle(e.target.value)}
+                placeholder="e.g. Lecture slides"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>PDF file</Label>
+              <div
+                className="mt-1 flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-bg p-8 text-sm text-muted hover:border-accent transition-colors"
+                onClick={() => pdfRef.current?.click()}
+              >
+                {pdfFile ? pdfFile.name : 'Click to choose a PDF (max 10 MB)'}
+              </div>
+              <input
+                ref={pdfRef}
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
+              />
+            </div>
+            <OutputCheckboxes outputs={pdfOutputs} onChange={setPdfOutputs} />
+            <Button
+              onClick={submitPdf}
+              disabled={!pdfFile || busy}
+              className="w-full"
+            >
+              {busy ? 'Generating…' : 'Generate'}
+            </Button>
+          </TabsContent>
+
+          {/* Image tab */}
+          <TabsContent value="image" className="mt-4 space-y-4">
+            <div>
+              <Label htmlFor="img-title">Title (optional)</Label>
+              <Input
+                id="img-title"
+                value={imgTitle}
+                onChange={(e) => setImgTitle(e.target.value)}
+                placeholder="e.g. Whiteboard photo"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Image file</Label>
+              <div
+                className="mt-1 flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-bg p-8 text-sm text-muted hover:border-accent transition-colors"
+                onClick={() => imgRef.current?.click()}
+              >
+                {imgFile ? imgFile.name : 'Click to choose an image (max 8 MB)'}
+              </div>
+              <input
+                ref={imgRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/heic"
+                className="hidden"
+                onChange={(e) => setImgFile(e.target.files?.[0] ?? null)}
+              />
+            </div>
+            <OutputCheckboxes outputs={imgOutputs} onChange={setImgOutputs} />
+            <Button
+              onClick={submitImage}
+              disabled={!imgFile || busy}
+              className="w-full"
+            >
+              {busy ? 'Generating…' : 'Generate'}
+            </Button>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function OutputCheckboxes({
+  outputs,
+  onChange,
+}: {
+  outputs: { flashcards: boolean; summary: boolean };
+  onChange: (v: { flashcards: boolean; summary: boolean }) => void;
+}) {
+  return (
+    <div className="flex gap-4 text-sm text-fg">
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={outputs.flashcards}
+          onChange={(e) => onChange({ ...outputs, flashcards: e.target.checked })}
+          className="accent-accent"
+        />
+        Flashcards
+      </label>
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={outputs.summary}
+          onChange={(e) => onChange({ ...outputs, summary: e.target.checked })}
+          className="accent-accent"
+        />
+        Summary
+      </label>
+    </div>
+  );
+}
