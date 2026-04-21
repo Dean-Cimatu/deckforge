@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { relativeTime } from '@/lib/relativeTime';
+import { AppNav } from '@/components/AppNav';
 import type { CardSchema } from '@deckforge/shared';
 
 export default function SourceDetailPage() {
@@ -85,6 +86,8 @@ export default function SourceDetailPage() {
   }
 
   return (
+    <div className="min-h-screen bg-bg">
+    <AppNav />
     <div className="max-w-3xl mx-auto px-6 py-12">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-muted font-sans mb-8">
@@ -246,6 +249,7 @@ export default function SourceDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 }

@@ -260,10 +260,12 @@ sourcesRouter.get('/:id', async (req, res, next) => {
 sourcesRouter.get('/', async (req, res, next) => {
   try {
     const userId = new mongoose.Types.ObjectId(req.user!.id);
-    const query = req.query as { type?: string; page?: string };
+    const query = req.query as { type?: string; page?: string; q?: string; limit?: string };
     const { sources, total, page } = await listSources(userId, {
       ...(query.type !== undefined && { type: query.type as import('@deckforge/shared').SourceType }),
       ...(query.page !== undefined && { page: parseInt(query.page, 10) }),
+      ...(query.q !== undefined && { q: query.q }),
+      ...(query.limit !== undefined && { limit: parseInt(query.limit, 10) }),
     });
     res.json({ sources, total, page });
   } catch (err) {

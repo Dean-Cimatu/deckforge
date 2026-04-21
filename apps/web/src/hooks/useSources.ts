@@ -26,16 +26,35 @@ export function useSource(id: string) {
   });
 }
 
-export function useSources(opts: { type?: string; page?: number } = {}) {
+export function useSources(opts: { type?: string; page?: number; q?: string; limit?: number } = {}) {
   const params = new URLSearchParams();
   if (opts.type) params.set('type', opts.type);
   if (opts.page) params.set('page', String(opts.page));
+  if (opts.q) params.set('q', opts.q);
+  if (opts.limit) params.set('limit', String(opts.limit));
   const qs = params.toString();
 
   return useQuery<SourceListResponse>({
     queryKey: ['sources', opts],
     queryFn: () => api.get<SourceListResponse>(`/sources${qs ? `?${qs}` : ''}`),
   });
+}
+
+export interface DueSummary {
+  totalDue: number;
+  byDeck: { deckId: string; sourceId: string; title: string; dueCount: number }[];
+}
+
+export function useDueSummary() {
+  return useQuery<DueSummary>({
+    queryKey: ['due'],
+    queryFn: () => api.get<DueSummary>('/due'),
+    staleTime: 30_000,
+  });
+}
+
+export function useRecentSources() {
+  return useSources({ limit: 3 });
 }
 
 export function useDeleteSource() {

@@ -32,17 +32,19 @@ export async function getSource(
 
 export async function listSources(
   userId: Types.ObjectId,
-  opts: { type?: SourceType; page?: number } = {}
+  opts: { type?: SourceType; page?: number; q?: string; limit?: number } = {}
 ): Promise<{ sources: ISource[]; total: number; page: number }> {
   const page = Math.max(1, opts.page ?? 1);
+  const limit = opts.limit ?? PAGE_SIZE;
   const filter: Record<string, unknown> = { userId };
   if (opts.type) filter.type = opts.type;
+  if (opts.q) filter.title = { $regex: opts.q, $options: 'i' };
 
   const [sources, total] = await Promise.all([
     Source.find(filter)
       .sort({ createdAt: -1 })
-      .skip((page - 1) * PAGE_SIZE)
-      .limit(PAGE_SIZE),
+      .skip((page - 1) * limit)
+      .limit(limit),
     Source.countDocuments(filter),
   ]);
 

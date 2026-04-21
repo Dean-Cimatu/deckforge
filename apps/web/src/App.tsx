@@ -7,6 +7,7 @@ const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/pages/RegisterPage'));
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const SourceDetailPage = lazy(() => import('@/pages/SourceDetailPage'));
+const LibraryPage = lazy(() => import('@/pages/LibraryPage'));
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -46,6 +47,14 @@ export default function App() {
             <RequireGuest>
               <RegisterPage />
             </RequireGuest>
+          }
+        />
+        <Route
+          path="/sources"
+          element={
+            <RequireAuth>
+              <LibraryPage />
+            </RequireAuth>
           }
         />
         <Route
