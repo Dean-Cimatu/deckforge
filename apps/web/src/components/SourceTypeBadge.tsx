@@ -1,4 +1,4 @@
-import { Youtube } from 'lucide-react';
+import { Youtube, Globe } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { SourceType } from '@deckforge/shared';
 
@@ -21,6 +21,15 @@ export function SourceTypeBadge({ type }: Props) {
       <Badge variant="outline" className="flex items-center gap-1 text-red-500 border-red-300 dark:border-red-800">
         <Youtube className="h-3 w-3" />
         YouTube
+      </Badge>
+    );
+  }
+
+  if (type === 'url') {
+    return (
+      <Badge variant="outline" className="flex items-center gap-1">
+        <Globe className="h-3 w-3" />
+        Article
       </Badge>
     );
   }

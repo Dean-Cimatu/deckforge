@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Youtube } from 'lucide-react';
+import { Youtube, Globe } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,10 @@ export function NewSourceModal({ open, onClose }: Props) {
   const [ytOutputs, setYtOutputs] = useState({ flashcards: true, summary: true });
   const [ytUrlError, setYtUrlError] = useState('');
 
+  const [urlTitle, setUrlTitle] = useState('');
+  const [urlHref, setUrlHref] = useState('');
+  const [urlOutputs, setUrlOutputs] = useState({ flashcards: true, summary: true });
+
   function outputsArray(o: { flashcards: boolean; summary: boolean }) {
     const arr: string[] = [];
     if (o.flashcards) arr.push('flashcards');
@@ -55,10 +59,25 @@ export function NewSourceModal({ open, onClose }: Props) {
     setPdfTitle(''); setPdfFile(null);
     setImgTitle(''); setImgFile(null);
     setYtTitle(''); setYtUrl(''); setYtUrlError('');
+    setUrlTitle(''); setUrlHref('');
     onClose();
   }
 
   const YT_RE = /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/i;
+
+  async function submitUrl() {
+    if (!urlHref.trim()) return;
+    try {
+      const res = await create.mutateAsync({
+        type: 'url',
+        body: { ...(urlTitle ? { title: urlTitle } : {}), url: urlHref, outputs: outputsArray(urlOutputs) },
+      });
+      close();
+      navigate(`/sources/${res.id}`);
+    } catch {
+      toast({ title: 'Failed to fetch article', variant: 'destructive' });
+    }
+  }
 
   async function submitYoutube() {
     if (!YT_RE.test(ytUrl)) {
@@ -145,6 +164,7 @@ export function NewSourceModal({ open, onClose }: Props) {
             <TabsTrigger value="pdf" className="flex-1">PDF</TabsTrigger>
             <TabsTrigger value="image" className="flex-1">Image</TabsTrigger>
             <TabsTrigger value="youtube" className="flex-1">YouTube</TabsTrigger>
+            <TabsTrigger value="url" className="flex-1">URL</TabsTrigger>
           </TabsList>
 
           {/* Text tab */}
@@ -286,6 +306,40 @@ export function NewSourceModal({ open, onClose }: Props) {
             <Button
               onClick={submitYoutube}
               disabled={!ytUrl.trim() || busy}
+              className="w-full"
+            >
+              {busy ? 'Generating…' : 'Generate'}
+            </Button>
+          </TabsContent>
+          {/* URL tab */}
+          <TabsContent value="url" className="mt-4 space-y-4">
+            <div>
+              <Label htmlFor="url-title">Title (optional)</Label>
+              <Input
+                id="url-title"
+                value={urlTitle}
+                onChange={(e) => setUrlTitle(e.target.value)}
+                placeholder="e.g. React Hooks Guide"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="url-href">Article URL</Label>
+              <div className="relative mt-1">
+                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+                <Input
+                  id="url-href"
+                  value={urlHref}
+                  onChange={(e) => setUrlHref(e.target.value)}
+                  placeholder="https://..."
+                  className="pl-9"
+                />
+              </div>
+            </div>
+            <OutputCheckboxes outputs={urlOutputs} onChange={setUrlOutputs} />
+            <Button
+              onClick={submitUrl}
+              disabled={!urlHref.trim() || busy}
               className="w-full"
             >
               {busy ? 'Generating…' : 'Generate'}
