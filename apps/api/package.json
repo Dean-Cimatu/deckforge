@@ -31,6 +31,7 @@
     "@types/morgan": "^1.9.9",
     "@types/node": "^20.14.12",
     "esbuild": "^0.23.0",
+    "mongodb-memory-server": "^11.0.1",
     "tsx": "^4.16.2",
     "vitest": "^2.0.4"
   }
