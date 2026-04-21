@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Youtube } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,11 @@ export function NewSourceModal({ open, onClose }: Props) {
   const [imgOutputs, setImgOutputs] = useState({ flashcards: true, summary: true });
   const imgRef = useRef<HTMLInputElement>(null);
 
+  const [ytTitle, setYtTitle] = useState('');
+  const [ytUrl, setYtUrl] = useState('');
+  const [ytOutputs, setYtOutputs] = useState({ flashcards: true, summary: true });
+  const [ytUrlError, setYtUrlError] = useState('');
+
   function outputsArray(o: { flashcards: boolean; summary: boolean }) {
     const arr: string[] = [];
     if (o.flashcards) arr.push('flashcards');
@@ -48,7 +54,32 @@ export function NewSourceModal({ open, onClose }: Props) {
     setTextTitle(''); setTextBody('');
     setPdfTitle(''); setPdfFile(null);
     setImgTitle(''); setImgFile(null);
+    setYtTitle(''); setYtUrl(''); setYtUrlError('');
     onClose();
+  }
+
+  const YT_RE = /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/i;
+
+  async function submitYoutube() {
+    if (!YT_RE.test(ytUrl)) {
+      setYtUrlError('Please enter a valid YouTube URL.');
+      return;
+    }
+    setYtUrlError('');
+    try {
+      const res = await create.mutateAsync({
+        type: 'youtube',
+        body: {
+          ...(ytTitle ? { title: ytTitle } : {}),
+          url: ytUrl,
+          outputs: outputsArray(ytOutputs),
+        },
+      });
+      close();
+      navigate(`/sources/${res.id}`);
+    } catch {
+      toast({ title: 'Failed to add YouTube source', variant: 'destructive' });
+    }
   }
 
   async function submitText() {
@@ -113,6 +144,7 @@ export function NewSourceModal({ open, onClose }: Props) {
             <TabsTrigger value="text" className="flex-1">Text</TabsTrigger>
             <TabsTrigger value="pdf" className="flex-1">PDF</TabsTrigger>
             <TabsTrigger value="image" className="flex-1">Image</TabsTrigger>
+            <TabsTrigger value="youtube" className="flex-1">YouTube</TabsTrigger>
           </TabsList>
 
           {/* Text tab */}
@@ -218,6 +250,42 @@ export function NewSourceModal({ open, onClose }: Props) {
             <Button
               onClick={submitImage}
               disabled={!imgFile || busy}
+              className="w-full"
+            >
+              {busy ? 'Generating…' : 'Generate'}
+            </Button>
+          </TabsContent>
+
+          {/* YouTube tab */}
+          <TabsContent value="youtube" className="mt-4 space-y-4">
+            <div>
+              <Label htmlFor="yt-title">Title (optional)</Label>
+              <Input
+                id="yt-title"
+                value={ytTitle}
+                onChange={(e) => setYtTitle(e.target.value)}
+                placeholder="e.g. MIT 6.006 Lecture 1"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="yt-url">YouTube URL</Label>
+              <div className="relative mt-1">
+                <Youtube className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-red-500" />
+                <Input
+                  id="yt-url"
+                  value={ytUrl}
+                  onChange={(e) => { setYtUrl(e.target.value); setYtUrlError(''); }}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="pl-9"
+                />
+              </div>
+              {ytUrlError && <p className="mt-1 text-xs text-warn">{ytUrlError}</p>}
+            </div>
+            <OutputCheckboxes outputs={ytOutputs} onChange={setYtOutputs} />
+            <Button
+              onClick={submitYoutube}
+              disabled={!ytUrl.trim() || busy}
               className="w-full"
             >
               {busy ? 'Generating…' : 'Generate'}

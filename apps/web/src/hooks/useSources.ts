@@ -66,7 +66,7 @@ export function useCreateSource() {
       formData,
       body,
     }: {
-      type: 'text' | 'pdf' | 'image';
+      type: 'text' | 'pdf' | 'image' | 'youtube' | 'url';
       formData?: FormData;
       body?: unknown;
     }) => {

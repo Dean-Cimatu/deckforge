@@ -18,6 +18,14 @@ vi.mock('../env.js', () => ({
   },
 }));
 
+// Mock youtube-transcript (imported transitively via routes/sources → ingest/youtube)
+vi.mock('youtube-transcript', () => ({
+  YoutubeTranscript: { fetchTranscript: vi.fn() },
+  YoutubeTranscriptDisabledError: class extends Error {},
+  YoutubeTranscriptNotAvailableError: class extends Error {},
+  YoutubeTranscriptNotAvailableLanguageError: class extends Error {},
+}));
+
 // Mock Anthropic client
 vi.mock('../ai/client.js', () => ({
   anthropic: { messages: { create: vi.fn() } },

@@ -8,6 +8,7 @@ import { generateRateLimit } from '../middleware/rateLimit.js';
 import { ingestText } from '../ingest/text.js';
 import { ingestPdf } from '../ingest/pdf.js';
 import { ingestImage } from '../ingest/image.js';
+import { ingestYoutube, IngestError } from '../ingest/youtube.js';
 import { Source } from '../models/Source.js';
 import { Deck } from '../models/Deck.js';
 import { Card } from '../models/Card.js';
@@ -125,6 +126,39 @@ sourcesRouter.post(
     }
   }
 );
+
+// ── POST /api/sources/youtube ─────────────────────────────────────────────────
+
+sourcesRouter.post('/youtube', generateRateLimit, async (req, res, next) => {
+  try {
+    const body = req.body as { title?: string; url?: string; outputs?: unknown };
+    if (!body.url || typeof body.url !== 'string') {
+      res.status(400).json({ error: 'url is required' });
+      return;
+    }
+    const outputs: OutputType[] = parseOutputs(body as Record<string, unknown>);
+    const { title, text, meta } = await ingestYoutube({ ...(body.title !== undefined && { title: body.title }), url: body.url });
+    const userId = new mongoose.Types.ObjectId(req.user!.id);
+    const source = await createSource(userId, {
+      title,
+      type: 'youtube',
+      inputMeta: { url: body.url, ...(meta as object) },
+    });
+    await Source.findByIdAndUpdate(source._id, { extractedText: text });
+
+    generateArtefacts(source._id, text, outputs).catch((err: unknown) => {
+      console.error('generateArtefacts failed for source', source._id.toString(), err);
+    });
+
+    res.status(201).json({ id: source._id.toString(), status: source.status });
+  } catch (err) {
+    if (err instanceof IngestError) {
+      res.status(422).json({ error: err.message });
+      return;
+    }
+    next(err);
+  }
+});
 
 // ── GET /api/sources/:id ──────────────────────────────────────────────────────
 

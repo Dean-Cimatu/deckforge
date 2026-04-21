@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useSource, useDeleteSource, usePatchSource } from '@/hooks/useSources';
-import { Badge } from '@/components/ui/badge';
+import { SourceTypeBadge } from '@/components/SourceTypeBadge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -124,7 +124,7 @@ export default function SourceDetailPage() {
           )}
 
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
-            <Badge variant="outline" className="capitalize">{source.type}</Badge>
+            <SourceTypeBadge type={source.type} />
             {deck && <><span>·</span><span>{deck.cardCount} cards</span></>}
             <span>·</span>
             <span>{relativeTime(source.createdAt)}</span>
