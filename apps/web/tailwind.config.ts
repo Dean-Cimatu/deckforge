@@ -8,24 +8,35 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        serif: ['Fraunces', 'Georgia', 'serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        serif: ['Fraunces', 'ui-serif', 'serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
       },
       colors: {
-        ink: {
-          DEFAULT: '#1a1a1a',
-          muted: '#6b7280',
+        bg: 'hsl(var(--bg))',
+        surface: 'hsl(var(--surface))',
+        fg: 'hsl(var(--fg))',
+        muted: 'hsl(var(--muted))',
+        accent: 'hsl(var(--accent))',
+        success: 'hsl(var(--success))',
+        warn: 'hsl(var(--warn))',
+        border: 'hsl(var(--border))',
+      },
+      borderColor: {
+        DEFAULT: 'hsl(var(--border))',
+      },
+      keyframes: {
+        'card-flip': {
+          '0%': { transform: 'rotateY(0deg)' },
+          '100%': { transform: 'rotateY(180deg)' },
         },
-        paper: {
-          DEFAULT: '#fafaf8',
-          dark: '#f0efec',
-        },
-        amber: {
-          DEFAULT: '#f59e0b',
-          hover: '#d97706',
-        },
-        surface: '#ffffff',
-        border: '#e5e5e3',
+      },
+      animation: {
+        'card-flip': 'card-flip 300ms ease-out forwards',
+      },
+      transitionDuration: {
+        press: '100ms',
+        tab: '150ms',
+        flip: '300ms',
       },
     },
   },

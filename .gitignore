@@ -29,3 +29,8 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+# Generated JS/d.ts from TS config files (vite.config, tailwind.config)
+apps/web/*.js
+apps/web/*.js.map
+apps/web/*.d.ts
+apps/web/*.d.ts.map
