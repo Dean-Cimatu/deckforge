@@ -14,7 +14,7 @@ jobs:
       - name: Health check
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            https://deckforge-api.onrender.com/health)
+            https://deckforge-api-8zvd.onrender.com/health)
           echo "Status: $STATUS"
           if [ "$STATUS" != "200" ]; then
             echo "::warning::API returned $STATUS — may still be deploying"
