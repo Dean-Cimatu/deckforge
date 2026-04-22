@@ -19,7 +19,7 @@ export function AppNav() {
       <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-3">
         <Link to="/" className="font-serif text-lg font-semibold text-fg">DeckForge</Link>
         <nav className="flex items-center gap-4">
-          <Link to="/" className={navClass('/')} end>
+          <Link to="/" className={navClass('/')}>
             <span className="flex items-center gap-1.5"><BookOpen className="h-4 w-4" />Home</span>
           </Link>
           <Link to="/sources" className={navClass('/sources')}>

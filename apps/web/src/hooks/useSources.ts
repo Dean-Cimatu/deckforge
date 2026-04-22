@@ -119,7 +119,7 @@ export function useCreateSource() {
       formData,
       body,
     }: {
-      type: 'text' | 'pdf' | 'image' | 'youtube' | 'url';
+      type: 'text' | 'pdf' | 'image' | 'images' | 'youtube' | 'url';
       formData?: FormData;
       body?: unknown;
     }) => {
