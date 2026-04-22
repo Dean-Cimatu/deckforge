@@ -52,7 +52,11 @@ const sourceSchema = new mongoose.Schema<ISource>(
     },
     generationError: { type: String, default: null },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
 
 sourceSchema.index({ userId: 1, createdAt: -1 });

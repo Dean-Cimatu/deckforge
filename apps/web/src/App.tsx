@@ -12,6 +12,7 @@ const LibraryPage = lazy(() => import('@/pages/LibraryPage'));
 const ReviewPage = lazy(() => import('@/pages/ReviewPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 const DeckStudyPage = lazy(() => import('@/pages/DeckStudyPage'));
+const QuizPage = lazy(() => import('@/pages/QuizPage'));
 const CreateDeckPage = lazy(() => import('@/pages/CreateDeckPage'));
 const SharedDeckPage = lazy(() => import('@/pages/SharedDeckPage'));
 
@@ -93,6 +94,14 @@ export default function App() {
           element={
             <RequireAuth>
               <DeckStudyPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/deck/:deckId/quiz"
+          element={
+            <RequireAuth>
+              <QuizPage />
             </RequireAuth>
           }
         />

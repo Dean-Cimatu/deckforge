@@ -10,9 +10,10 @@ interface Props {
 }
 
 export function SourceCard({ source, cardCount, dueCount }: Props) {
+  const sourceId = source.id ?? (source as unknown as { _id: string })._id;
   return (
     <Link
-      to={`/sources/${source.id}`}
+      to={`/sources/${sourceId}`}
       className="group block rounded-xl border border-border bg-surface hover:shadow-md hover:-translate-y-0.5 transition-all duration-150"
     >
       <div className="h-36 rounded-t-xl bg-bg flex items-center justify-center overflow-hidden">

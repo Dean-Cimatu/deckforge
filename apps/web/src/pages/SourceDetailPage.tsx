@@ -4,9 +4,10 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoreHorizontal, Pencil, Trash2, BookOpen, Brain, Plus, Share2, Check, Copy } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, BookOpen, Brain, Plus, Share2, Check, Copy, Users, UserMinus, ListChecks } from 'lucide-react';
 import { ImagePicker } from '@/components/ImagePicker';
-import { useShareDeck, useUnshareDeck } from '@/hooks/useSources';
+import { TagInput } from '@/components/TagInput';
+import { useShareDeck, useUnshareDeck, useCollaborators, useAddCollaborator, useRemoveCollaborator } from '@/hooks/useSources';
 import { useSource, useDeleteSource, usePatchSource, usePatchCard, useDeleteCard, useAddCard } from '@/hooks/useSources';
 import { SourceTypeBadge } from '@/components/SourceTypeBadge';
 import { Button } from '@/components/ui/button';
@@ -35,7 +36,7 @@ export default function SourceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data, isLoading, isError } = useSource(id!);
+  const { data, isLoading, isError, error } = useSource(id!);
   const deleteSource = useDeleteSource();
   const patchSource = usePatchSource(id!);
 
@@ -47,15 +48,17 @@ export default function SourceDetailPage() {
 
   if (isLoading) return <PageSkeleton />;
   if (isError || !data) {
+    const errMsg = (error as { message?: string } | null)?.message;
     return (
       <div className="max-w-3xl mx-auto px-6 py-12 text-center">
         <p className="text-muted">Source not found.</p>
+        {errMsg && <p className="mt-2 text-xs text-warn font-mono">{errMsg}</p>}
         <Link to="/sources" className="mt-4 inline-block text-accent text-sm">← Back to sources</Link>
       </div>
     );
   }
 
-  const { source, deck, cards } = data;
+  const { source, deck, cards, isOwner } = data;
   const isProcessing = source.status === 'processing';
   const hasError = source.status === 'partial' || source.status === 'failed';
 
@@ -233,6 +236,13 @@ export default function SourceDetailPage() {
                     Flashcards
                   </Link>
                   <Link
+                    to={`/deck/${deck?.id}/quiz`}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium text-fg hover:border-accent transition-colors"
+                  >
+                    <ListChecks className="h-4 w-4" />
+                    Quiz
+                  </Link>
+                  <Link
                     to={`/review?deckId=${deck?.id}`}
                     className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium text-fg hover:border-accent transition-colors"
                   >
@@ -242,7 +252,10 @@ export default function SourceDetailPage() {
                 </div>
 
                 {/* Share */}
-                {deck && <SharePanel deck={deck} sourceId={id!} />}
+                {deck && isOwner && <SharePanel deck={deck} sourceId={id!} />}
+
+                {/* Collaborators */}
+                {deck && isOwner && <CollaboratorsPanel deckId={deck.id} />}
 
                 {/* Card count */}
                 <p className="mt-6 mb-3 text-xs font-semibold uppercase tracking-widest text-muted">
@@ -256,8 +269,8 @@ export default function SourceDetailPage() {
                   ))}
                 </ul>
 
-                {/* Add card — only for manual decks */}
-                {source.type === 'manual' && deck && (
+                {/* Add card — manual decks or collaborator access */}
+                {(source.type === 'manual' || !isOwner) && deck && (
                   <AddCardRow deckId={deck.id} sourceId={id!} />
                 )}
               </>
@@ -295,6 +308,7 @@ function CardRow({ card, sourceId }: { card: CardSchema; sourceId: string }) {
   const [back, setBack] = useState(card.back);
   const [frontImage, setFrontImage] = useState<string | null>(card.frontImage ?? null);
   const [backImage, setBackImage] = useState<string | null>(card.backImage ?? null);
+  const [tags, setTags] = useState<string[]>(card.tags ?? []);
   const { toast } = useToast();
   const patchCard = usePatchCard(sourceId);
   const deleteCard = useDeleteCard(sourceId);
@@ -302,7 +316,7 @@ function CardRow({ card, sourceId }: { card: CardSchema; sourceId: string }) {
   async function saveEdit() {
     if (!front.trim() || !back.trim()) return;
     try {
-      await patchCard.mutateAsync({ id: card.id, front: front.trim(), back: back.trim(), frontImage, backImage });
+      await patchCard.mutateAsync({ id: card.id, front: front.trim(), back: back.trim(), frontImage, backImage, tags });
       setEditing(false);
     } catch {
       toast({ title: 'Failed to save card', variant: 'destructive' });
@@ -344,9 +358,13 @@ function CardRow({ card, sourceId }: { card: CardSchema; sourceId: string }) {
             <ImagePicker value={backImage} onChange={setBackImage} side="back" />
           </div>
         </div>
+        <div className="space-y-1">
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted">Tags</span>
+          <TagInput value={tags} onChange={setTags} />
+        </div>
         <div className="flex gap-2">
           <Button size="sm" onClick={saveEdit} disabled={patchCard.isPending}>Save</Button>
-          <Button size="sm" variant="ghost" onClick={() => { setFront(card.front); setBack(card.back); setFrontImage(card.frontImage ?? null); setBackImage(card.backImage ?? null); setEditing(false); }}>Cancel</Button>
+          <Button size="sm" variant="ghost" onClick={() => { setFront(card.front); setBack(card.back); setFrontImage(card.frontImage ?? null); setBackImage(card.backImage ?? null); setTags(card.tags ?? []); setEditing(false); }}>Cancel</Button>
         </div>
       </li>
     );
@@ -380,6 +398,13 @@ function CardRow({ card, sourceId }: { card: CardSchema; sourceId: string }) {
             {!flipped && card.frontImage && (
               <img src={card.frontImage} alt="" className="max-h-32 rounded-lg object-contain border border-border" />
             )}
+            {!flipped && card.tags && card.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 pt-1">
+                {card.tags.map((t) => (
+                  <span key={t} className="rounded-md bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">{t}</span>
+                ))}
+              </div>
+            )}
           </div>
         </motion.div>
       </AnimatePresence>
@@ -409,15 +434,16 @@ function AddCardRow({ deckId, sourceId }: { deckId: string; sourceId: string }) 
   const [back, setBack] = useState('');
   const [frontImage, setFrontImage] = useState<string | null>(null);
   const [backImage, setBackImage] = useState<string | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
   const { toast } = useToast();
   const addCard = useAddCard();
 
-  function reset() { setFront(''); setBack(''); setFrontImage(null); setBackImage(null); setOpen(false); }
+  function reset() { setFront(''); setBack(''); setFrontImage(null); setBackImage(null); setTags([]); setOpen(false); }
 
   async function save() {
     if (!front.trim() || !back.trim()) return;
     try {
-      await addCard.mutateAsync({ deckId, front: front.trim(), back: back.trim(), frontImage, backImage });
+      await addCard.mutateAsync({ deckId, front: front.trim(), back: back.trim(), frontImage, backImage, tags });
       reset();
     } catch {
       toast({ title: 'Failed to add card', variant: 'destructive' });
@@ -461,6 +487,10 @@ function AddCardRow({ deckId, sourceId }: { deckId: string; sourceId: string }) 
           />
           <ImagePicker value={backImage} onChange={setBackImage} side="back" />
         </div>
+      </div>
+      <div className="space-y-1">
+        <span className="text-xs font-semibold uppercase tracking-widest text-muted">Tags</span>
+        <TagInput value={tags} onChange={setTags} />
       </div>
       <div className="flex gap-2">
         <Button size="sm" onClick={save} disabled={addCard.isPending || !front.trim() || !back.trim()}>Add</Button>
@@ -539,6 +569,80 @@ function SharePanel({ deck, sourceId }: { deck: import('@deckforge/shared').Deck
 
       {!deck.isPublic && (
         <p className="mt-1 text-xs text-muted">Anyone with the link can view and study this deck.</p>
+      )}
+    </div>
+  );
+}
+
+function CollaboratorsPanel({ deckId }: { deckId: string }) {
+  const [emailInput, setEmailInput] = useState('');
+  const { data, isLoading } = useCollaborators(deckId);
+  const addCollaborator = useAddCollaborator(deckId);
+  const removeCollaborator = useRemoveCollaborator(deckId);
+  const { toast } = useToast();
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    const email = emailInput.trim();
+    if (!email) return;
+    try {
+      await addCollaborator.mutateAsync(email);
+      setEmailInput('');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to add collaborator';
+      toast({ title: msg, variant: 'destructive' });
+    }
+  }
+
+  async function handleRemove(collaboratorId: string) {
+    try {
+      await removeCollaborator.mutateAsync(collaboratorId);
+    } catch {
+      toast({ title: 'Failed to remove collaborator', variant: 'destructive' });
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-xl border border-border bg-surface p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Users className="h-4 w-4 text-muted" />
+        <span className="text-sm font-medium text-fg">Collaborators</span>
+      </div>
+
+      <form onSubmit={handleAdd} className="flex gap-2 mb-3">
+        <input
+          type="email"
+          value={emailInput}
+          onChange={(e) => setEmailInput(e.target.value)}
+          placeholder="Add by email address"
+          className="flex-1 rounded-lg border border-border bg-bg px-3 py-1.5 text-sm text-fg placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent"
+        />
+        <Button type="submit" size="sm" disabled={addCollaborator.isPending || !emailInput.trim()}>
+          Add
+        </Button>
+      </form>
+
+      {isLoading && <p className="text-xs text-muted">Loading…</p>}
+
+      {!isLoading && data?.collaborators.length === 0 && (
+        <p className="text-xs text-muted">No collaborators yet. Invite someone to edit this deck together.</p>
+      )}
+
+      {data?.collaborators && data.collaborators.length > 0 && (
+        <ul className="space-y-1">
+          {data.collaborators.map((c) => (
+            <li key={c.id} className="flex items-center justify-between py-1">
+              <span className="text-sm text-fg">{c.email}</span>
+              <button
+                onClick={() => handleRemove(c.id)}
+                disabled={removeCollaborator.isPending}
+                className="text-muted hover:text-warn transition-colors p-1 rounded"
+              >
+                <UserMinus className="h-3.5 w-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

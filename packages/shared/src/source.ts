@@ -30,6 +30,7 @@ export const CardSchema = z.object({
   back: z.string(),
   frontImage: z.string().nullable().optional(),
   backImage: z.string().nullable().optional(),
+  tags: z.array(z.string()).default([]),
   easeFactor: z.number().default(2.5),
   interval: z.number().int().default(0),
   repetitions: z.number().int().default(0),

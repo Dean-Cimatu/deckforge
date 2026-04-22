@@ -25,11 +25,52 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
+          // Source list — used by LibraryPage
           {
-            urlPattern: /^https?:\/\/.*\/api\/review\/queue/,
+            urlPattern: /\/api\/sources(\?.*)?$/,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'review-queue',
+              cacheName: 'api-sources',
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 5, maxAgeSeconds: 60 * 60 * 24 },
+            },
+          },
+          // Individual source detail — used by SourceDetailPage
+          {
+            urlPattern: /\/api\/sources\/[^/]+$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-source-detail',
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
+            },
+          },
+          // Deck cards — used by DeckStudyPage
+          {
+            urlPattern: /\/api\/decks\/[^/]+\/cards$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-deck-cards',
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
+            },
+          },
+          // Review queue — used by ReviewPage
+          {
+            urlPattern: /\/api\/review\/queue/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-review-queue',
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 1, maxAgeSeconds: 60 * 60 * 24 },
+            },
+          },
+          // Due summary — used by HomePage
+          {
+            urlPattern: /\/api\/due$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-due',
               networkTimeoutSeconds: 5,
               expiration: { maxEntries: 1, maxAgeSeconds: 60 * 60 * 24 },
             },

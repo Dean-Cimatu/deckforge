@@ -87,7 +87,7 @@ export default function HomePage() {
               ) : (
                 <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {recent?.sources.map((source) => (
-                    <SourceCard key={source.id} source={source} />
+                    <SourceCard key={source.id ?? (source as unknown as { _id: string })._id} source={source} />
                   ))}
                 </div>
               )}

@@ -6,6 +6,7 @@ export interface SourceDetail {
   source: SourceSchema;
   deck: DeckSchema | null;
   cards: CardSchema[];
+  isOwner: boolean;
 }
 
 export interface SourceListResponse {
@@ -118,12 +119,13 @@ export function useReviewCard() {
 export function usePatchCard(sourceId?: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, front, back, frontImage, backImage }: { id: string; front?: string; back?: string; frontImage?: string | null; backImage?: string | null }) =>
+    mutationFn: ({ id, front, back, frontImage, backImage, tags }: { id: string; front?: string; back?: string; frontImage?: string | null; backImage?: string | null; tags?: string[] }) =>
       api.patch(`/cards/${id}`, {
         ...(front !== undefined && { front }),
         ...(back !== undefined && { back }),
         ...(frontImage !== undefined && { frontImage }),
         ...(backImage !== undefined && { backImage }),
+        ...(tags !== undefined && { tags }),
       }),
     onSuccess: () => {
       if (sourceId) qc.invalidateQueries({ queryKey: ['source', sourceId] });
@@ -155,8 +157,8 @@ export function useCreateManualDeck() {
 export function useAddCard() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ deckId, front, back, frontImage, backImage }: { deckId: string; front: string; back: string; frontImage?: string | null; backImage?: string | null }) =>
-      api.post(`/cards`, { deckId, front, back, ...(frontImage ? { frontImage } : {}), ...(backImage ? { backImage } : {}) }),
+    mutationFn: ({ deckId, front, back, frontImage, backImage, tags }: { deckId: string; front: string; back: string; frontImage?: string | null; backImage?: string | null; tags?: string[] }) =>
+      api.post(`/cards`, { deckId, front, back, ...(frontImage ? { frontImage } : {}), ...(backImage ? { backImage } : {}), ...(tags ? { tags } : {}) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['deck-cards'] });
       qc.invalidateQueries({ queryKey: ['source'] });
@@ -185,6 +187,49 @@ export function usePublicDeck(shareId: string | undefined) {
     queryKey: ['public-deck', shareId],
     queryFn: () => api.get(`/share/${shareId}`),
     enabled: Boolean(shareId),
+  });
+}
+
+export interface SharedDeckEntry {
+  deck: DeckSchema;
+  source: SourceSchema | null;
+}
+
+export function useSharedDecks() {
+  return useQuery<{ decks: SharedDeckEntry[] }>({
+    queryKey: ['shared-with-me'],
+    queryFn: () => api.get('/decks/shared-with-me'),
+  });
+}
+
+export interface CollaboratorEntry {
+  id: string;
+  email: string;
+}
+
+export function useCollaborators(deckId: string | undefined) {
+  return useQuery<{ collaborators: CollaboratorEntry[] }>({
+    queryKey: ['collaborators', deckId],
+    queryFn: () => api.get(`/decks/${deckId}/collaborators`),
+    enabled: Boolean(deckId),
+  });
+}
+
+export function useAddCollaborator(deckId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (email: string) =>
+      api.post<CollaboratorEntry>(`/decks/${deckId}/collaborators`, { email }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['collaborators', deckId] }),
+  });
+}
+
+export function useRemoveCollaborator(deckId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (collaboratorId: string) =>
+      api.delete(`/decks/${deckId}/collaborators/${collaboratorId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['collaborators', deckId] }),
   });
 }
 

@@ -10,6 +10,12 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     return;
   }
 
+  // Mongoose CastError — invalid ObjectId in a route param
+  if ((err as { name?: string }).name === 'CastError') {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+
   const status = (err as { status?: number }).status ?? 500;
   const message =
     err instanceof Error ? err.message : 'Internal server error';

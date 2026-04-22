@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Upload, Search, Plus } from 'lucide-react';
-import { useSources } from '@/hooks/useSources';
+import { Link } from 'react-router-dom';
+import { Upload, Search, Plus, Users } from 'lucide-react';
+import { useSources, useSharedDecks } from '@/hooks/useSources';
 import { SourceCard } from '@/components/SourceCard';
 import { AppNav } from '@/components/AppNav';
 import { NewSourceModal } from '@/components/NewSourceModal';
@@ -28,6 +29,7 @@ export default function LibraryPage() {
     q: debouncedSearch || undefined,
     type: typeFilter,
   });
+  const { data: sharedData } = useSharedDecks();
 
   return (
     <div className="min-h-screen bg-bg">
@@ -85,8 +87,30 @@ export default function LibraryPage() {
         {!isLoading && !isError && data && data.sources.length > 0 && (
           <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {data.sources.map((source) => (
-              <SourceCard key={source.id} source={source} />
+              <SourceCard key={source.id ?? (source as unknown as { _id: string })._id} source={source} />
             ))}
+          </div>
+        )}
+
+        {/* Shared with me */}
+        {sharedData && sharedData.decks.length > 0 && (
+          <div className="mt-16">
+            <div className="flex items-center gap-2 mb-4">
+              <Users className="h-5 w-5 text-muted" />
+              <h2 className="font-serif text-2xl text-fg">Shared with me</h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {sharedData.decks.map(({ deck, source }) => (
+                <Link
+                  key={deck.id}
+                  to={source ? `/sources/${source.id}` : `/deck/${deck.id}/study`}
+                  className="rounded-xl border border-border bg-surface p-5 hover:border-accent/60 transition-colors block"
+                >
+                  <p className="font-serif text-lg text-fg leading-snug">{deck.title}</p>
+                  <p className="mt-1 text-sm text-muted">{deck.cardCount} cards</p>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
       </div>

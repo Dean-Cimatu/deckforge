@@ -292,7 +292,19 @@ sourcesRouter.post('/manual', async (req, res, next) => {
 sourcesRouter.get('/:id', async (req, res, next) => {
   try {
     const userId = new mongoose.Types.ObjectId(req.user!.id);
-    const source = await getSource(req.params.id!, userId);
+
+    // Owner access
+    let source = await getSource(req.params.id!, userId);
+
+    // Collaborator access: check if the source's deck lists userId as a collaborator
+    if (!source) {
+      const candidate = await Source.findById(req.params.id);
+      if (candidate) {
+        const deck = await Deck.findOne({ sourceId: candidate._id, collaborators: userId }).lean();
+        if (deck) source = candidate;
+      }
+    }
+
     if (!source) {
       res.status(404).json({ error: 'Source not found' });
       return;
@@ -300,8 +312,9 @@ sourcesRouter.get('/:id', async (req, res, next) => {
 
     const deck = await Deck.findOne({ sourceId: source._id });
     const cards = deck ? await Card.find({ deckId: deck._id }) : [];
+    const isOwner = source.userId.equals(userId);
 
-    res.json({ source, deck: deck ?? null, cards });
+    res.json({ source, deck: deck ?? null, cards, isOwner });
   } catch (err) {
     next(err);
   }

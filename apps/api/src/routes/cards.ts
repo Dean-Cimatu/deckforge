@@ -22,12 +22,15 @@ function validateImage(val: string | undefined): string | undefined {
   throw new Error('Invalid image value');
 }
 
+const TagsSchema = z.array(z.string().max(32)).max(10).optional();
+
 const CreateCardInput = z.object({
   deckId: z.string(),
   front: z.string().min(1),
   back: z.string().min(1),
   frontImage: z.string().optional(),
   backImage: z.string().optional(),
+  tags: TagsSchema,
 });
 
 const PatchCardInput = z.object({
@@ -35,6 +38,7 @@ const PatchCardInput = z.object({
   back: z.string().min(1).optional(),
   frontImage: z.string().nullable().optional(),
   backImage: z.string().nullable().optional(),
+  tags: TagsSchema,
 });
 
 // POST /api/cards
@@ -44,7 +48,7 @@ cardsRouter.post('/', async (req, res, next) => {
     const userId = new mongoose.Types.ObjectId(req.user!.id);
     const deckId = new mongoose.Types.ObjectId(body.deckId);
 
-    const deck = await Deck.findOne({ _id: deckId, userId });
+    const deck = await Deck.findOne({ _id: deckId, $or: [{ userId }, { collaborators: userId }] });
     if (!deck) { res.status(404).json({ error: 'Deck not found' }); return; }
 
     const card = await Card.create({
@@ -54,6 +58,7 @@ cardsRouter.post('/', async (req, res, next) => {
       back: body.back,
       frontImage: validateImage(body.frontImage) ?? null,
       backImage: validateImage(body.backImage) ?? null,
+      tags: body.tags ?? [],
     } as Parameters<typeof Card.create>[0]);
     await Deck.findByIdAndUpdate(deckId, { $inc: { cardCount: 1 } });
 
@@ -100,20 +105,22 @@ cardsRouter.patch('/:id', async (req, res, next) => {
     const userId = new mongoose.Types.ObjectId(req.user!.id);
     const cardId = new mongoose.Types.ObjectId(req.params.id);
 
+    // Allow owner or collaborator
+    const card = await Card.findById(cardId);
+    if (!card) { res.status(404).json({ error: 'Card not found' }); return; }
+
+    const deck = await Deck.findOne({ _id: card.deckId, $or: [{ userId }, { collaborators: userId }] });
+    if (!deck) { res.status(403).json({ error: 'Forbidden' }); return; }
+
     const updates: Record<string, unknown> = {};
     if (body.front !== undefined) updates.front = body.front;
     if (body.back !== undefined) updates.back = body.back;
     if (body.frontImage !== undefined) updates.frontImage = body.frontImage === null ? null : validateImage(body.frontImage);
     if (body.backImage !== undefined) updates.backImage = body.backImage === null ? null : validateImage(body.backImage);
+    if (body.tags !== undefined) updates.tags = body.tags;
 
-    const card = await Card.findOneAndUpdate(
-      { _id: cardId, userId },
-      { $set: updates },
-      { returnDocument: 'after' },
-    );
-    if (!card) { res.status(404).json({ error: 'Card not found' }); return; }
-
-    res.json(card);
+    const updated = await Card.findByIdAndUpdate(cardId, { $set: updates }, { returnDocument: 'after' });
+    res.json(updated);
   } catch (err) {
     next(err);
   }
@@ -125,9 +132,13 @@ cardsRouter.delete('/:id', async (req, res, next) => {
     const userId = new mongoose.Types.ObjectId(req.user!.id);
     const cardId = new mongoose.Types.ObjectId(req.params.id);
 
-    const card = await Card.findOneAndDelete({ _id: cardId, userId });
+    const card = await Card.findById(cardId);
     if (!card) { res.status(404).json({ error: 'Card not found' }); return; }
 
+    const deck = await Deck.findOne({ _id: card.deckId, $or: [{ userId }, { collaborators: userId }] });
+    if (!deck) { res.status(403).json({ error: 'Forbidden' }); return; }
+
+    await Card.findByIdAndDelete(cardId);
     await Deck.findByIdAndUpdate(card.deckId, { $inc: { cardCount: -1 } });
 
     res.status(204).end();

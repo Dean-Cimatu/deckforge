@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Shuffle, RotateCcw, Brain } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Shuffle, RotateCcw, Brain, ListChecks } from 'lucide-react';
 import { useDeckCards } from '@/hooks/useSources';
 import { Button } from '@/components/ui/button';
 import type { CardSchema } from '@deckforge/shared';
@@ -199,12 +199,20 @@ export default function DeckStudyPage() {
       {/* Footer */}
       <div className="px-6 pb-8 flex flex-col items-center gap-4">
         <p className="text-xs text-muted">← → arrows to navigate</p>
-        <Button asChild size="lg" className="gap-2">
-          <Link to={`/review?deckId=${deckId}`}>
-            <Brain className="h-4 w-4" />
-            Start spaced review
-          </Link>
-        </Button>
+        <div className="flex gap-3">
+          <Button asChild size="lg" variant="outline" className="gap-2">
+            <Link to={`/deck/${deckId}/quiz`}>
+              <ListChecks className="h-4 w-4" />
+              Quiz mode
+            </Link>
+          </Button>
+          <Button asChild size="lg" className="gap-2">
+            <Link to={`/review?deckId=${deckId}`}>
+              <Brain className="h-4 w-4" />
+              Spaced review
+            </Link>
+          </Button>
+        </div>
       </div>
     </div>
   );

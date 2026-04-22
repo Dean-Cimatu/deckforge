@@ -8,6 +8,7 @@ export interface ICard extends Document {
   back: string;
   frontImage?: string;
   backImage?: string;
+  tags: string[];
   easeFactor: number;
   interval: number;
   repetitions: number;
@@ -24,13 +25,18 @@ const cardSchema = new mongoose.Schema<ICard>(
     back: { type: String, required: true },
     frontImage: { type: String, default: null },
     backImage: { type: String, default: null },
+    tags: { type: [String], default: [] },
     easeFactor: { type: Number, default: 2.5 },
     interval: { type: Number, default: 0 },
     repetitions: { type: Number, default: 0 },
     nextReviewAt: { type: Date, default: () => new Date() },
     lastReviewedAt: { type: Date, default: null },
   },
-  { timestamps: { createdAt: true, updatedAt: false } }
+  {
+    timestamps: { createdAt: true, updatedAt: false },
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
 
 cardSchema.index({ userId: 1, nextReviewAt: 1 });
