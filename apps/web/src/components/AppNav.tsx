@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { BookOpen, Library, Moon, Sun } from 'lucide-react';
+import { BookOpen, Library, Moon, Sun, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,9 @@ export function AppNav() {
           </Link>
         </nav>
         <div className="ml-auto flex items-center gap-2">
+          <Link to="/settings" className={`rounded p-2 transition-colors ${location.pathname === '/settings' ? 'text-fg' : 'text-muted hover:text-fg'}`} aria-label="Settings">
+            <Settings className="h-4 w-4" />
+          </Link>
           <button
             onClick={toggle}
             className="rounded p-2 text-muted hover:text-fg transition-colors"

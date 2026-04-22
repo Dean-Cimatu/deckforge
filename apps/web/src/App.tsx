@@ -9,6 +9,7 @@ const HomePage = lazy(() => import('@/pages/HomePage'));
 const SourceDetailPage = lazy(() => import('@/pages/SourceDetailPage'));
 const LibraryPage = lazy(() => import('@/pages/LibraryPage'));
 const ReviewPage = lazy(() => import('@/pages/ReviewPage'));
+const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -71,6 +72,14 @@ export default function App() {
           element={
             <RequireAuth>
               <ReviewPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <RequireAuth>
+              <SettingsPage />
             </RequireAuth>
           }
         />

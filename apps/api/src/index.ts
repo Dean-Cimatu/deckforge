@@ -10,6 +10,8 @@ import { dueRouter } from './routes/due.js';
 import { reviewRouter } from './routes/review.js';
 import { cardsRouter } from './routes/cards.js';
 import { decksRouter } from './routes/decks.js';
+import { apiKeysRouter } from './routes/apiKeys.js';
+import { v1Router } from './routes/v1.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -29,6 +31,8 @@ app.use('/api/due', dueRouter);
 app.use('/api/review', reviewRouter);
 app.use('/api/cards', cardsRouter);
 app.use('/api/decks', decksRouter);
+app.use('/api/keys', apiKeysRouter);
+app.use('/api/v1', v1Router);
 app.use(errorHandler);
 
 connectDB()
