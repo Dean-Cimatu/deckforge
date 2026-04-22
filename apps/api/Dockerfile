@@ -32,12 +32,15 @@ ENV NODE_ENV=production
 # Copy the bundle
 COPY --from=build /app/apps/api/dist ./dist
 
-# Install only production deps for external packages (jsdom, canvas, etc.)
+# Copy all workspace manifests so pnpm can resolve the full workspace
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build /app/apps/api/package.json ./apps/api/package.json
+COPY --from=build /app/apps/web/package.json ./apps/web/package.json
 COPY --from=build /app/packages/shared/package.json ./packages/shared/package.json
+
+# Install production deps only — resolves external packages (jsdom, pdf-parse, etc.)
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 EXPOSE 3000
