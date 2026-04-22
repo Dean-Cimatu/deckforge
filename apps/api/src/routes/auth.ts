@@ -12,10 +12,11 @@ const COOKIE_NAME = 'df_session';
 const COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days ms
 
 function setSessionCookie(res: import('express').Response, token: string) {
+  const prod = env.NODE_ENV === 'production';
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: prod,
+    sameSite: prod ? 'none' : 'lax',
     maxAge: COOKIE_MAX_AGE,
     path: '/',
   });
@@ -73,7 +74,8 @@ authRouter.post('/login', async (req, res) => {
 });
 
 authRouter.post('/logout', (_req, res) => {
-  res.clearCookie(COOKIE_NAME, { path: '/' });
+  const prod = env.NODE_ENV === 'production';
+  res.clearCookie(COOKIE_NAME, { path: '/', secure: prod, sameSite: prod ? 'none' : 'lax' });
   res.json({ ok: true });
 });
 
