@@ -4,8 +4,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoreHorizontal, Pencil, Trash2, BookOpen, Brain } from 'lucide-react';
-import { useSource, useDeleteSource, usePatchSource } from '@/hooks/useSources';
+import { MoreHorizontal, Pencil, Trash2, BookOpen, Brain, Plus } from 'lucide-react';
+import { useSource, useDeleteSource, usePatchSource, usePatchCard, useDeleteCard, useAddCard } from '@/hooks/useSources';
 import { SourceTypeBadge } from '@/components/SourceTypeBadge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -241,7 +241,7 @@ export default function SourceDetailPage() {
 
                 {/* Card count */}
                 <p className="mt-6 mb-3 text-xs font-semibold uppercase tracking-widest text-muted">
-                  {cards.length} cards
+                  {cards.length} {cards.length === 1 ? 'card' : 'cards'}
                 </p>
 
                 {/* Card list */}
@@ -250,6 +250,11 @@ export default function SourceDetailPage() {
                     <CardRow key={card.id} card={card} sourceId={id!} />
                   ))}
                 </ul>
+
+                {/* Add card — only for manual decks */}
+                {source.type === 'manual' && deck && (
+                  <AddCardRow deckId={deck.id} sourceId={id!} />
+                )}
               </>
             )}
           </TabsContent>
@@ -278,32 +283,60 @@ export default function SourceDetailPage() {
   );
 }
 
-function CardRow({ card }: { card: CardSchema; sourceId: string }) {
+function CardRow({ card, sourceId }: { card: CardSchema; sourceId: string }) {
   const [flipped, setFlipped] = useState(false);
   const [editing, setEditing] = useState(false);
   const [front, setFront] = useState(card.front);
   const [back, setBack] = useState(card.back);
+  const { toast } = useToast();
+  const patchCard = usePatchCard(sourceId);
+  const deleteCard = useDeleteCard(sourceId);
+
+  async function saveEdit() {
+    if (!front.trim() || !back.trim()) return;
+    try {
+      await patchCard.mutateAsync({ id: card.id, front: front.trim(), back: back.trim() });
+      setEditing(false);
+    } catch {
+      toast({ title: 'Failed to save card', variant: 'destructive' });
+    }
+  }
+
+  async function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation();
+    try {
+      await deleteCard.mutateAsync(card.id);
+    } catch {
+      toast({ title: 'Failed to delete card', variant: 'destructive' });
+    }
+  }
 
   if (editing) {
     return (
       <li className="rounded-xl border border-accent bg-surface p-4 space-y-3">
-        <textarea
-          value={front}
-          onChange={(e) => setFront(e.target.value)}
-          rows={2}
-          autoFocus
-          className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-accent resize-none"
-          placeholder="Front (term)"
-        />
-        <textarea
-          value={back}
-          onChange={(e) => setBack(e.target.value)}
-          rows={2}
-          className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-accent resize-none"
-          placeholder="Back (definition)"
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <span className="text-xs font-semibold uppercase tracking-widest text-muted">Term</span>
+            <textarea
+              value={front}
+              onChange={(e) => setFront(e.target.value)}
+              rows={3}
+              autoFocus
+              className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+            />
+          </div>
+          <div className="space-y-1">
+            <span className="text-xs font-semibold uppercase tracking-widest text-muted">Definition</span>
+            <textarea
+              value={back}
+              onChange={(e) => setBack(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+            />
+          </div>
+        </div>
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => setEditing(false)}>Save</Button>
+          <Button size="sm" onClick={saveEdit} disabled={patchCard.isPending}>Save</Button>
           <Button size="sm" variant="ghost" onClick={() => { setFront(card.front); setBack(card.back); setEditing(false); }}>Cancel</Button>
         </div>
       </li>
@@ -334,12 +367,82 @@ function CardRow({ card }: { card: CardSchema; sourceId: string }) {
         </motion.div>
       </AnimatePresence>
 
+      <div className="absolute right-3 top-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+        <button
+          onClick={(e) => { e.stopPropagation(); setEditing(true); }}
+          className="p-1 rounded text-muted hover:text-fg transition-colors"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={handleDelete}
+          disabled={deleteCard.isPending}
+          className="p-1 rounded text-muted hover:text-warn transition-colors"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </li>
+  );
+}
+
+function AddCardRow({ deckId, sourceId }: { deckId: string; sourceId: string }) {
+  const [open, setOpen] = useState(false);
+  const [front, setFront] = useState('');
+  const [back, setBack] = useState('');
+  const { toast } = useToast();
+  const addCard = useAddCard();
+
+  async function save() {
+    if (!front.trim() || !back.trim()) return;
+    try {
+      await addCard.mutateAsync({ deckId, front: front.trim(), back: back.trim() });
+      setFront(''); setBack(''); setOpen(false);
+    } catch {
+      toast({ title: 'Failed to add card', variant: 'destructive' });
+    }
+  }
+
+  if (!open) {
+    return (
       <button
-        onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-        className="absolute right-3 top-3 p-1 rounded text-muted opacity-0 group-hover:opacity-100 hover:text-fg transition-all"
+        onClick={() => setOpen(true)}
+        className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border py-4 text-sm font-medium text-muted hover:border-accent hover:text-accent transition-colors"
       >
-        <Pencil className="h-3.5 w-3.5" />
+        <Plus className="h-4 w-4" /> Add card
       </button>
+    );
+  }
+
+  return (
+    <li className="mt-2 rounded-xl border border-accent bg-surface p-4 space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted">Term</span>
+          <textarea
+            value={front}
+            onChange={(e) => setFront(e.target.value)}
+            rows={3}
+            autoFocus
+            placeholder="Enter term"
+            className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+          />
+        </div>
+        <div className="space-y-1">
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted">Definition</span>
+          <textarea
+            value={back}
+            onChange={(e) => setBack(e.target.value)}
+            rows={3}
+            placeholder="Enter definition"
+            className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+          />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Button size="sm" onClick={save} disabled={addCard.isPending || !front.trim() || !back.trim()}>Add</Button>
+        <Button size="sm" variant="ghost" onClick={() => { setFront(''); setBack(''); setOpen(false); }}>Cancel</Button>
+      </div>
     </li>
   );
 }

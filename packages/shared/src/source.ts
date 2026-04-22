@@ -11,7 +11,7 @@ export const SUPPORTED_LANGUAGES = [
 
 export type LanguageCode = typeof SUPPORTED_LANGUAGES[number]['code'];
 
-export const SourceType = z.enum(['text', 'pdf', 'image', 'images', 'youtube', 'url']);
+export const SourceType = z.enum(['text', 'pdf', 'image', 'images', 'youtube', 'url', 'manual']);
 export const SourceStatus = z.enum(['processing', 'ready', 'partial', 'failed']);
 export const OutputType = z.enum(['flashcards', 'summary']);
 

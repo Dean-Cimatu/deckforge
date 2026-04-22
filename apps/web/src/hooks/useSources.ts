@@ -115,12 +115,47 @@ export function useReviewCard() {
   });
 }
 
-export function usePatchCard() {
+export function usePatchCard(sourceId?: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, front, back }: { id: string; front?: string; back?: string }) =>
       api.patch(`/cards/${id}`, { ...(front !== undefined && { front }), ...(back !== undefined && { back }) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['source'] }),
+    onSuccess: () => {
+      if (sourceId) qc.invalidateQueries({ queryKey: ['source', sourceId] });
+      qc.invalidateQueries({ queryKey: ['deck-cards'] });
+    },
+  });
+}
+
+export function useDeleteCard(sourceId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/cards/${id}`),
+    onSuccess: () => {
+      if (sourceId) qc.invalidateQueries({ queryKey: ['source', sourceId] });
+      qc.invalidateQueries({ queryKey: ['deck-cards'] });
+    },
+  });
+}
+
+export function useCreateManualDeck() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { title: string; cards: { front: string; back: string }[]; language?: string }) =>
+      api.post<{ id: string; status: string }>('/sources/manual', body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['sources'] }),
+  });
+}
+
+export function useAddCard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ deckId, front, back }: { deckId: string; front: string; back: string }) =>
+      api.post(`/cards`, { deckId, front, back }),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['deck-cards'] });
+      qc.invalidateQueries({ queryKey: ['source'] });
+    },
   });
 }
 

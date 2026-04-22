@@ -1,4 +1,4 @@
-import { Youtube, Globe } from 'lucide-react';
+import { Youtube, Globe, LayoutGrid } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { SourceType } from '@deckforge/shared';
 
@@ -9,6 +9,7 @@ const LABELS: Record<SourceType, string> = {
   images: 'Images',
   youtube: 'YouTube',
   url: 'Article',
+  manual: 'Deck',
 };
 
 interface Props {
@@ -30,6 +31,15 @@ export function SourceTypeBadge({ type }: Props) {
       <Badge variant="outline" className="flex items-center gap-1">
         <Globe className="h-3 w-3" />
         Article
+      </Badge>
+    );
+  }
+
+  if (type === 'manual') {
+    return (
+      <Badge variant="outline" className="flex items-center gap-1 text-accent border-accent/40">
+        <LayoutGrid className="h-3 w-3" />
+        Deck
       </Badge>
     );
   }

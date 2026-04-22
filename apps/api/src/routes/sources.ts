@@ -245,6 +245,46 @@ sourcesRouter.post(
   }
 );
 
+// ── POST /api/sources/manual ──────────────────────────────────────────────────
+
+sourcesRouter.post('/manual', async (req, res, next) => {
+  try {
+    const body = req.body as {
+      title?: string;
+      cards?: { front: string; back: string }[];
+      language?: unknown;
+    };
+    const title = (body.title?.trim()) || 'Untitled deck';
+    const language = parseLanguage(body as Record<string, unknown>);
+    const rawCards = Array.isArray(body.cards) ? body.cards : [];
+    const cards = rawCards.filter((c) => c.front?.trim() && c.back?.trim());
+
+    const userId = new mongoose.Types.ObjectId(req.user!.id);
+    const source = await createSource(userId, { title, type: 'manual', language, inputMeta: {} });
+    await Source.findByIdAndUpdate(source._id, { status: 'ready' });
+
+    const deck = await Deck.create({
+      sourceId: source._id,
+      userId,
+      title,
+      cardCount: cards.length,
+    });
+
+    if (cards.length > 0) {
+      await Card.insertMany(cards.map((c) => ({
+        deckId: deck._id,
+        userId,
+        front: c.front.trim(),
+        back: c.back.trim(),
+      })));
+    }
+
+    res.status(201).json({ id: source._id.toString(), status: 'ready' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── GET /api/sources/:id ──────────────────────────────────────────────────────
 
 sourcesRouter.get('/:id', async (req, res, next) => {

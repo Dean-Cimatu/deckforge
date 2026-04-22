@@ -28,7 +28,7 @@ const sourceSchema = new mongoose.Schema<ISource>(
     type: {
       type: String,
       required: true,
-      enum: ['text', 'pdf', 'image', 'images', 'youtube', 'url'],
+      enum: ['text', 'pdf', 'image', 'images', 'youtube', 'url', 'manual'],
     },
     language: {
       type: String,

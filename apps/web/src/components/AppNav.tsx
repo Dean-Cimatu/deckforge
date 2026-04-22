@@ -27,6 +27,9 @@ export function AppNav() {
           <Link to="/sources" className={navClass('/sources')}>
             <span className="flex items-center gap-1.5"><Library className="h-4 w-4" />{t.nav.sources}</span>
           </Link>
+          <Link to="/decks/new" className={navClass('/decks/new')}>
+            <span className="flex items-center gap-1.5"><span className="font-medium">+</span> Create</span>
+          </Link>
         </nav>
         <div className="ml-auto flex items-center gap-2">
           <Link to="/settings" className={`rounded p-2 transition-colors ${location.pathname === '/settings' ? 'text-fg' : 'text-muted hover:text-fg'}`} aria-label="Settings">
