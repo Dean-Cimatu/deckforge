@@ -1,0 +1,200 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useReviewQueue, useReviewCard } from '@/hooks/useSources';
+import { previewIntervals } from '@deckforge/shared';
+import type { CardSchema } from '@deckforge/shared';
+import type { Grade } from '@deckforge/shared';
+import { Button } from '@/components/ui/button';
+
+const GRADE_LABELS: Record<Grade, string> = {
+  0: 'Again',
+  3: 'Hard',
+  4: 'Good',
+  5: 'Easy',
+};
+
+const GRADE_KEYS: Record<string, Grade> = {
+  '1': 0,
+  '2': 3,
+  '3': 4,
+  '4': 5,
+};
+
+function intervalLabel(days: number): string {
+  if (days === 1) return '1d';
+  if (days < 30) return `${days}d`;
+  if (days < 365) return `${Math.round(days / 30)}mo`;
+  return `${Math.round(days / 365)}y`;
+}
+
+export default function ReviewPage() {
+  const [params] = useSearchParams();
+  const deckId = params.get('deckId') ?? undefined;
+  const { data, isLoading } = useReviewQueue(deckId);
+  const reviewCard = useReviewCard();
+
+  const [queue, setQueue] = useState<CardSchema[]>([]);
+  const [reviewed, setReviewed] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (data?.cards) {
+      setQueue(data.cards);
+      setDone(false);
+      setReviewed(0);
+      setFlipped(false);
+    }
+  }, [data]);
+
+  const current = queue[0];
+
+  const grade = useCallback(
+    async (g: Grade) => {
+      if (!current) return;
+      setFlipped(false);
+      await reviewCard.mutateAsync({ id: current.id, grade: g });
+      setQueue((q) => q.slice(1));
+      setReviewed((n) => n + 1);
+      if (queue.length === 1) setDone(true);
+    },
+    [current, queue.length, reviewCard],
+  );
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (!flipped) {
+        if (e.code === 'Space' || e.code === 'Enter') {
+          e.preventDefault();
+          setFlipped(true);
+        }
+        return;
+      }
+      const g = GRADE_KEYS[e.key];
+      if (g !== undefined) grade(g);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [flipped, grade]);
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-bg flex items-center justify-center">
+        <p className="text-muted text-sm">Loading cards…</p>
+      </div>
+    );
+  }
+
+  if (done || (!isLoading && queue.length === 0 && reviewed === 0)) {
+    const isEmpty = reviewed === 0;
+    return (
+      <div className="fixed inset-0 bg-bg flex flex-col items-center justify-center gap-6 text-center px-6">
+        <h1 className="font-serif text-5xl text-fg">
+          {isEmpty ? 'All caught up.' : 'Nice work.'}
+        </h1>
+        {!isEmpty && (
+          <p className="text-muted text-sm">
+            You reviewed {reviewed} card{reviewed !== 1 ? 's' : ''}.
+          </p>
+        )}
+        {isEmpty && (
+          <p className="text-muted text-sm max-w-xs">No cards are due right now. Check back later or add more sources.</p>
+        )}
+        <div className="flex gap-3">
+          <Button asChild variant="outline">
+            <Link to="/">Home</Link>
+          </Button>
+          <Button asChild>
+            <Link to="/sources">Sources</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!current) return null;
+
+  const sm2State = {
+    interval: current.interval,
+    easeFactor: current.easeFactor,
+    repetitions: current.repetitions,
+  };
+  const previews = previewIntervals(sm2State);
+
+  const progress = reviewed / (reviewed + queue.length);
+
+  return (
+    <div className="fixed inset-0 bg-bg flex flex-col">
+      {/* Progress bar */}
+      <div className="h-1 bg-border">
+        <div
+          className="h-full bg-accent transition-all duration-500"
+          style={{ width: `${progress * 100}%` }}
+        />
+      </div>
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4">
+        <Link to="/" className="text-sm text-muted hover:text-fg transition-colors">← Exit</Link>
+        <span className="text-sm text-muted">{reviewed + queue.length} remaining</span>
+      </div>
+
+      {/* Card */}
+      <div className="flex-1 flex items-center justify-center px-6">
+        <div
+          className="w-full max-w-xl cursor-pointer"
+          onClick={() => !flipped && setFlipped(true)}
+          style={{ perspective: 1200 }}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={flipped ? 'back' : 'front'}
+              initial={{ rotateY: flipped ? -90 : 90, opacity: 0 }}
+              animate={{ rotateY: 0, opacity: 1 }}
+              exit={{ rotateY: flipped ? 90 : -90, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="rounded-2xl border border-border bg-surface p-10 min-h-[240px] flex flex-col items-center justify-center text-center shadow-sm"
+            >
+              {flipped ? (
+                <p className="text-lg text-fg leading-relaxed">{current.back}</p>
+              ) : (
+                <>
+                  <p className="font-serif text-2xl text-fg leading-snug">{current.front}</p>
+                  <p className="mt-6 text-xs text-muted">Space / click to reveal</p>
+                </>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Grade buttons */}
+      <div className="px-6 pb-10">
+        {flipped ? (
+          <div className="flex gap-3 justify-center flex-wrap">
+            {([0, 3, 4, 5] as Grade[]).map((g) => (
+              <button
+                key={g}
+                onClick={() => grade(g)}
+                disabled={reviewCard.isPending}
+                className="flex flex-col items-center gap-1 rounded-xl border border-border bg-surface px-5 py-3 text-sm hover:border-accent hover:bg-surface/80 transition-colors disabled:opacity-50"
+              >
+                <span className="font-medium text-fg">{GRADE_LABELS[g]}</span>
+                <span className="text-xs text-muted">{intervalLabel(previews[g])}</span>
+                <span className="text-xs text-muted/60">[{g === 0 ? '1' : g === 3 ? '2' : g === 4 ? '3' : '4'}]</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="flex justify-center">
+            <Button size="lg" onClick={() => setFlipped(true)}>
+              Show answer
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

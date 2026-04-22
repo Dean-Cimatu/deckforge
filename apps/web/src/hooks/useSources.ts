@@ -77,6 +77,40 @@ export function usePatchSource(id: string) {
   });
 }
 
+export interface ReviewQueueResponse {
+  cards: CardSchema[];
+  total: number;
+}
+
+export function useReviewQueue(deckId?: string) {
+  const qs = deckId ? `?deckId=${deckId}` : '';
+  return useQuery<ReviewQueueResponse>({
+    queryKey: ['review-queue', deckId],
+    queryFn: () => api.get<ReviewQueueResponse>(`/review/queue${qs}`),
+  });
+}
+
+export function useReviewCard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, grade }: { id: string; grade: number }) =>
+      api.post<{ interval: number; nextReviewAt: string }>(`/cards/${id}/review`, { grade }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['review-queue'] });
+      qc.invalidateQueries({ queryKey: ['due'] });
+    },
+  });
+}
+
+export function usePatchCard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, front, back }: { id: string; front?: string; back?: string }) =>
+      api.patch(`/cards/${id}`, { ...(front !== undefined && { front }), ...(back !== undefined && { back }) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['source'] }),
+  });
+}
+
 export function useCreateSource() {
   const qc = useQueryClient();
   return useMutation({

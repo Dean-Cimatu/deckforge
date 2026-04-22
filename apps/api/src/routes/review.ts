@@ -12,7 +12,8 @@ reviewRouter.get('/queue', async (req, res, next) => {
     const userId = new mongoose.Types.ObjectId(req.user!.id);
     const now = new Date();
 
-    const query: mongoose.FilterQuery<typeof Card> = { userId, nextReviewAt: { $lte: now } };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const query: Record<string, any> = { userId, nextReviewAt: { $lte: now } };
 
     if (req.query.deckId) {
       query.deckId = new mongoose.Types.ObjectId(req.query.deckId as string);

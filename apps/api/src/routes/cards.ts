@@ -28,7 +28,7 @@ cardsRouter.post('/', async (req, res, next) => {
     const deckId = new mongoose.Types.ObjectId(body.deckId);
 
     const deck = await Deck.findOne({ _id: deckId, userId });
-    if (!deck) return res.status(404).json({ error: 'Deck not found' });
+    if (!deck) { res.status(404).json({ error: 'Deck not found' }); return; }
 
     const card = await Card.create({ deckId, userId, front: body.front, back: body.back });
     await Deck.findByIdAndUpdate(deckId, { $inc: { cardCount: 1 } });
@@ -47,7 +47,7 @@ cardsRouter.post('/:id/review', async (req, res, next) => {
     const cardId = new mongoose.Types.ObjectId(req.params.id);
 
     const card = await Card.findOne({ _id: cardId, userId });
-    if (!card) return res.status(404).json({ error: 'Card not found' });
+    if (!card) { res.status(404).json({ error: 'Card not found' }); return; }
 
     const state = { interval: card.interval, easeFactor: card.easeFactor, repetitions: card.repetitions };
     const now = new Date();
@@ -85,7 +85,7 @@ cardsRouter.patch('/:id', async (req, res, next) => {
       { $set: updates },
       { returnDocument: 'after' },
     );
-    if (!card) return res.status(404).json({ error: 'Card not found' });
+    if (!card) { res.status(404).json({ error: 'Card not found' }); return; }
 
     res.json(card);
   } catch (err) {
@@ -100,7 +100,7 @@ cardsRouter.delete('/:id', async (req, res, next) => {
     const cardId = new mongoose.Types.ObjectId(req.params.id);
 
     const card = await Card.findOneAndDelete({ _id: cardId, userId });
-    if (!card) return res.status(404).json({ error: 'Card not found' });
+    if (!card) { res.status(404).json({ error: 'Card not found' }); return; }
 
     await Deck.findByIdAndUpdate(card.deckId, { $inc: { cardCount: -1 } });
 
