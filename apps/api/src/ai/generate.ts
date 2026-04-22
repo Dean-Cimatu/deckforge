@@ -52,8 +52,13 @@ export async function generateFlashcards(text: string): Promise<z.infer<typeof R
 
   const tryParse = (raw: string) => {
     try {
-      const parsed = JSON.parse(raw.trim());
-      return RawCardSchema.parse(parsed);
+      let cleaned = raw.trim();
+      const fenced = cleaned.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
+      if (fenced) cleaned = fenced[1]!.trim();
+      // Also handle cases where there's text before/after the array
+      const arrayMatch = cleaned.match(/(\[[\s\S]*\])/);
+      if (arrayMatch && !cleaned.startsWith('[')) cleaned = arrayMatch[1]!;
+      return RawCardSchema.parse(JSON.parse(cleaned));
     } catch {
       return null;
     }

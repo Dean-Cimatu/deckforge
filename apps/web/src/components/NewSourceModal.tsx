@@ -76,8 +76,9 @@ export function NewSourceModal({ open, onClose }: Props) {
       });
       close();
       navigate(`/sources/${res.id}`);
-    } catch {
-      toast({ title: 'Failed to fetch article', variant: 'destructive' });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      toast({ title: 'Failed to fetch article', description: msg, variant: 'destructive' });
     }
   }
 
@@ -98,8 +99,9 @@ export function NewSourceModal({ open, onClose }: Props) {
       });
       close();
       navigate(`/sources/${res.id}`);
-    } catch {
-      toast({ title: 'Failed to add YouTube source', variant: 'destructive' });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      toast({ title: 'Failed to add YouTube source', description: msg, variant: 'destructive' });
     }
   }
 
