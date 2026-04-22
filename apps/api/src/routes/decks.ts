@@ -45,8 +45,11 @@ decksRouter.get('/:id/cards', async (req, res, next) => {
     }).lean();
     if (!deck) { res.status(404).json({ error: 'Deck not found' }); return; }
 
-    const cards = await Card.find({ deckId }).lean();
-    res.json({ deck, cards });
+    const rawCards = await Card.find({ deckId, suspended: { $ne: true } }).lean();
+    res.json({
+      deck: { ...deck, id: deck._id.toString() },
+      cards: rawCards.map((c) => ({ ...c, id: c._id.toString() })),
+    });
   } catch (err) {
     next(err);
   }

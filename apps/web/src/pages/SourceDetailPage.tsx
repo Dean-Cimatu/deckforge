@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoreHorizontal, Pencil, Trash2, BookOpen, Brain, Plus, Share2, Check, Copy, Users, UserMinus, ListChecks } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, BookOpen, Brain, Plus, Share2, Check, Copy, Users, UserMinus, ListChecks, EyeOff, Eye } from 'lucide-react';
 import { ImagePicker } from '@/components/ImagePicker';
 import { TagInput } from '@/components/TagInput';
 import { useShareDeck, useUnshareDeck, useCollaborators, useAddCollaborator, useRemoveCollaborator } from '@/hooks/useSources';
@@ -45,6 +45,7 @@ export default function SourceDetailPage() {
   const [editingSummary, setEditingSummary] = useState(false);
   const [summaryDraft, setSummaryDraft] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showSuspended, setShowSuspended] = useState(false);
 
   if (isLoading) return <PageSkeleton />;
   if (isError || !data) {
@@ -257,17 +258,34 @@ export default function SourceDetailPage() {
                 {/* Collaborators */}
                 {deck && isOwner && <CollaboratorsPanel deckId={deck.id} />}
 
-                {/* Card count */}
-                <p className="mt-6 mb-3 text-xs font-semibold uppercase tracking-widest text-muted">
-                  {cards.length} {cards.length === 1 ? 'card' : 'cards'}
-                </p>
-
-                {/* Card list */}
-                <ul className="space-y-2">
-                  {cards.map((card) => (
-                    <CardRow key={card.id} card={card} sourceId={id!} />
-                  ))}
-                </ul>
+                {/* Card count + suspended filter */}
+                {(() => {
+                  const suspendedCount = cards.filter((c) => c.suspended).length;
+                  const visibleCards = showSuspended ? cards : cards.filter((c) => !c.suspended);
+                  return (
+                    <>
+                      <div className="mt-6 mb-3 flex items-center justify-between">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+                          {cards.length - suspendedCount} active{suspendedCount > 0 ? ` · ${suspendedCount} suspended` : ''}
+                        </p>
+                        {suspendedCount > 0 && (
+                          <button
+                            onClick={() => setShowSuspended((s) => !s)}
+                            className="flex items-center gap-1 text-xs text-muted hover:text-fg transition-colors"
+                          >
+                            {showSuspended ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                            {showSuspended ? 'Hide suspended' : 'Show suspended'}
+                          </button>
+                        )}
+                      </div>
+                      <ul className="space-y-2">
+                        {visibleCards.map((card) => (
+                          <CardRow key={card.id} card={card} sourceId={id!} />
+                        ))}
+                      </ul>
+                    </>
+                  );
+                })()}
 
                 {/* Add card — manual decks or collaborator access */}
                 {(source.type === 'manual' || !isOwner) && deck && (
@@ -332,6 +350,15 @@ function CardRow({ card, sourceId }: { card: CardSchema; sourceId: string }) {
     }
   }
 
+  async function toggleSuspend(e: React.MouseEvent) {
+    e.stopPropagation();
+    try {
+      await patchCard.mutateAsync({ id: card.id, suspended: !card.suspended });
+    } catch {
+      toast({ title: 'Failed to update card', variant: 'destructive' });
+    }
+  }
+
   if (editing) {
     return (
       <li className="rounded-xl border border-accent bg-surface p-4 space-y-3">
@@ -372,7 +399,7 @@ function CardRow({ card, sourceId }: { card: CardSchema; sourceId: string }) {
 
   return (
     <li
-      className="group relative rounded-xl border border-border bg-surface cursor-pointer hover:border-accent/50 transition-colors overflow-hidden"
+      className={`group relative rounded-xl border bg-surface cursor-pointer transition-colors overflow-hidden ${card.suspended ? 'border-border opacity-50 hover:opacity-70' : 'border-border hover:border-accent/50'}`}
       onClick={() => setFlipped((f) => !f)}
       style={{ perspective: 800 }}
     >
@@ -405,11 +432,22 @@ function CardRow({ card, sourceId }: { card: CardSchema; sourceId: string }) {
                 ))}
               </div>
             )}
+            {!flipped && card.suspended && (
+              <span className="inline-block mt-1 rounded-md bg-muted/20 px-2 py-0.5 text-xs font-medium text-muted">Suspended</span>
+            )}
           </div>
         </motion.div>
       </AnimatePresence>
 
       <div className="absolute right-3 top-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+        <button
+          onClick={toggleSuspend}
+          disabled={patchCard.isPending}
+          title={card.suspended ? 'Unsuspend card' : 'Suspend card'}
+          className={`p-1 rounded transition-colors ${card.suspended ? 'text-accent hover:text-fg' : 'text-muted hover:text-accent'}`}
+        >
+          {card.suspended ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+        </button>
         <button
           onClick={(e) => { e.stopPropagation(); setEditing(true); }}
           className="p-1 rounded text-muted hover:text-fg transition-colors"

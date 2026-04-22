@@ -39,6 +39,7 @@ const PatchCardInput = z.object({
   frontImage: z.string().nullable().optional(),
   backImage: z.string().nullable().optional(),
   tags: TagsSchema,
+  suspended: z.boolean().optional(),
 });
 
 // POST /api/cards
@@ -118,6 +119,7 @@ cardsRouter.patch('/:id', async (req, res, next) => {
     if (body.frontImage !== undefined) updates.frontImage = body.frontImage === null ? null : validateImage(body.frontImage);
     if (body.backImage !== undefined) updates.backImage = body.backImage === null ? null : validateImage(body.backImage);
     if (body.tags !== undefined) updates.tags = body.tags;
+    if (body.suspended !== undefined) updates.suspended = body.suspended;
 
     const updated = await Card.findByIdAndUpdate(cardId, { $set: updates }, { returnDocument: 'after' });
     res.json(updated);

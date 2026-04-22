@@ -119,13 +119,14 @@ export function useReviewCard() {
 export function usePatchCard(sourceId?: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, front, back, frontImage, backImage, tags }: { id: string; front?: string; back?: string; frontImage?: string | null; backImage?: string | null; tags?: string[] }) =>
+    mutationFn: ({ id, front, back, frontImage, backImage, tags, suspended }: { id: string; front?: string; back?: string; frontImage?: string | null; backImage?: string | null; tags?: string[]; suspended?: boolean }) =>
       api.patch(`/cards/${id}`, {
         ...(front !== undefined && { front }),
         ...(back !== undefined && { back }),
         ...(frontImage !== undefined && { frontImage }),
         ...(backImage !== undefined && { backImage }),
         ...(tags !== undefined && { tags }),
+        ...(suspended !== undefined && { suspended }),
       }),
     onSuccess: () => {
       if (sourceId) qc.invalidateQueries({ queryKey: ['source', sourceId] });
