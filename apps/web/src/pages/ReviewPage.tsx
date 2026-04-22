@@ -30,6 +30,16 @@ function intervalLabel(days: number): string {
   return `${Math.round(days / 365)}y`;
 }
 
+const GRADE_SCORE: Record<Grade, number> = { 0: 0, 3: 60, 4: 80, 5: 100 };
+
+function letterGrade(pct: number): { letter: string; label: string; color: string } {
+  if (pct >= 85) return { letter: 'A', label: 'Excellent', color: 'text-green-400' };
+  if (pct >= 70) return { letter: 'B', label: 'Good job', color: 'text-blue-400' };
+  if (pct >= 55) return { letter: 'C', label: 'Keep practising', color: 'text-yellow-400' };
+  if (pct >= 40) return { letter: 'D', label: 'Needs work', color: 'text-orange-400' };
+  return { letter: 'F', label: 'Review these again soon', color: 'text-red-400' };
+}
+
 export default function ReviewPage() {
   const [params] = useSearchParams();
   const deckId = params.get('deckId') ?? undefined;
@@ -38,6 +48,7 @@ export default function ReviewPage() {
 
   const [queue, setQueue] = useState<CardSchema[]>([]);
   const [reviewed, setReviewed] = useState(0);
+  const [gradeCounts, setGradeCounts] = useState<Record<Grade, number>>({ 0: 0, 3: 0, 4: 0, 5: 0 });
   const [flipped, setFlipped] = useState(false);
   const [done, setDone] = useState(false);
   const [offline, setOffline] = useState(!navigator.onLine);
@@ -47,6 +58,7 @@ export default function ReviewPage() {
       setQueue(data.cards);
       setDone(false);
       setReviewed(0);
+      setGradeCounts({ 0: 0, 3: 0, 4: 0, 5: 0 });
       setFlipped(false);
     }
   }, [data]);
@@ -70,6 +82,7 @@ export default function ReviewPage() {
       } catch {
         await enqueueReview(current.id, g);
       }
+      setGradeCounts((prev) => ({ ...prev, [g]: prev[g] + 1 }));
       setQueue((q) => q.slice(1));
       setReviewed((n) => n + 1);
       if (queue.length === 1) setDone(true);
@@ -104,26 +117,76 @@ export default function ReviewPage() {
 
   if (done || (!isLoading && queue.length === 0 && reviewed === 0)) {
     const isEmpty = reviewed === 0;
-    return (
-      <div className="fixed inset-0 bg-bg flex flex-col items-center justify-center gap-6 text-center px-6">
-        <h1 className="font-serif text-5xl text-fg">
-          {isEmpty ? 'All caught up.' : 'Nice work.'}
-        </h1>
-        {!isEmpty && (
-          <p className="text-muted text-sm">
-            You reviewed {reviewed} card{reviewed !== 1 ? 's' : ''}.
-          </p>
-        )}
-        {isEmpty && (
+
+    if (isEmpty) {
+      return (
+        <div className="fixed inset-0 bg-bg flex flex-col items-center justify-center gap-6 text-center px-6">
+          <h1 className="font-serif text-5xl text-fg">All caught up.</h1>
           <p className="text-muted text-sm max-w-xs">No cards are due right now. Check back later or add more sources.</p>
-        )}
-        <div className="flex gap-3">
-          <Button asChild variant="outline">
-            <Link to="/">Home</Link>
-          </Button>
-          <Button asChild>
-            <Link to="/sources">Sources</Link>
-          </Button>
+          <div className="flex gap-3">
+            <Button asChild variant="outline"><Link to="/">Home</Link></Button>
+            <Button asChild><Link to="/sources">Sources</Link></Button>
+          </div>
+        </div>
+      );
+    }
+
+    const totalScore = (Object.entries(gradeCounts) as [string, number][]).reduce(
+      (sum, [g, count]) => sum + GRADE_SCORE[Number(g) as Grade] * count,
+      0,
+    );
+    const avgPct = Math.round(totalScore / reviewed);
+    const { letter, label, color } = letterGrade(avgPct);
+    const struggleCount = gradeCounts[0] + gradeCounts[3];
+    const strugglePct = Math.round((struggleCount / reviewed) * 100);
+
+    const gradeRows: { label: string; g: Grade; bar: string }[] = [
+      { label: 'Again', g: 0, bar: 'bg-red-500' },
+      { label: 'Hard', g: 3, bar: 'bg-orange-400' },
+      { label: 'Good', g: 4, bar: 'bg-blue-400' },
+      { label: 'Easy', g: 5, bar: 'bg-green-400' },
+    ];
+
+    return (
+      <div className="fixed inset-0 bg-bg flex flex-col items-center justify-center px-6 py-10 overflow-y-auto">
+        <div className="w-full max-w-sm flex flex-col items-center gap-6 text-center">
+          <h1 className="font-serif text-4xl text-fg">Session complete</h1>
+
+          {/* Grade */}
+          <div className="flex flex-col items-center gap-1">
+            <span className={`font-serif text-8xl font-bold leading-none ${color}`}>{letter}</span>
+            <span className="text-muted text-sm">{label}</span>
+            <span className="text-muted text-xs mt-1">{avgPct}% average score · {reviewed} card{reviewed !== 1 ? 's' : ''} reviewed</span>
+          </div>
+
+          {/* Breakdown */}
+          <div className="w-full rounded-2xl border border-border bg-surface p-5 flex flex-col gap-3">
+            {gradeRows.map(({ label: l, g, bar }) => {
+              const count = gradeCounts[g];
+              const pct = reviewed > 0 ? (count / reviewed) * 100 : 0;
+              return (
+                <div key={g} className="flex items-center gap-3">
+                  <span className="text-sm text-muted w-10 text-left">{l}</span>
+                  <div className="flex-1 h-2 rounded-full bg-border overflow-hidden">
+                    <div className={`h-full rounded-full ${bar} transition-all duration-500`} style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="text-sm text-fg tabular-nums w-6 text-right">{count}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Reflection hint */}
+          {strugglePct > 0 && (
+            <p className="text-sm text-muted max-w-xs">
+              {strugglePct}% of cards were marked Again or Hard — consider reviewing those again soon to reinforce them.
+            </p>
+          )}
+
+          <div className="flex gap-3">
+            <Button asChild variant="outline"><Link to="/">Home</Link></Button>
+            <Button asChild><Link to="/sources">Sources</Link></Button>
+          </div>
         </div>
       </div>
     );
@@ -159,7 +222,7 @@ export default function ReviewPage() {
               <WifiOff className="h-3.5 w-3.5" /> Offline — progress saved locally
             </span>
           )}
-          <span className="text-sm text-muted">{reviewed + queue.length} remaining</span>
+          <span className="text-sm text-muted">{queue.length} remaining</span>
         </div>
       </div>
 
