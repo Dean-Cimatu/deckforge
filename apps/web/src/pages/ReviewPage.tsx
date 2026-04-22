@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { WifiOff } from 'lucide-react';
 import { useReviewQueue, useReviewCard } from '@/hooks/useSources';
 import { previewIntervals } from '@deckforge/shared';
 import type { CardSchema } from '@deckforge/shared';
 import type { Grade } from '@deckforge/shared';
+import { enqueueReview } from '@/lib/offlineQueue';
 import { Button } from '@/components/ui/button';
 
 const GRADE_LABELS: Record<Grade, string> = {
@@ -38,6 +40,7 @@ export default function ReviewPage() {
   const [reviewed, setReviewed] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [done, setDone] = useState(false);
+  const [offline, setOffline] = useState(!navigator.onLine);
 
   useEffect(() => {
     if (data?.cards) {
@@ -48,13 +51,25 @@ export default function ReviewPage() {
     }
   }, [data]);
 
+  useEffect(() => {
+    function onOnline() { setOffline(false); }
+    function onOffline() { setOffline(true); }
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => { window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline); };
+  }, []);
+
   const current = queue[0];
 
   const grade = useCallback(
     async (g: Grade) => {
       if (!current) return;
       setFlipped(false);
-      await reviewCard.mutateAsync({ id: current.id, grade: g });
+      try {
+        await reviewCard.mutateAsync({ id: current.id, grade: g });
+      } catch {
+        await enqueueReview(current.id, g);
+      }
       setQueue((q) => q.slice(1));
       setReviewed((n) => n + 1);
       if (queue.length === 1) setDone(true);
@@ -138,7 +153,14 @@ export default function ReviewPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4">
         <Link to="/" className="text-sm text-muted hover:text-fg transition-colors">← Exit</Link>
-        <span className="text-sm text-muted">{reviewed + queue.length} remaining</span>
+        <div className="flex items-center gap-3">
+          {offline && (
+            <span className="flex items-center gap-1 text-xs text-warn">
+              <WifiOff className="h-3.5 w-3.5" /> Offline — progress saved locally
+            </span>
+          )}
+          <span className="text-sm text-muted">{reviewed + queue.length} remaining</span>
+        </div>
       </div>
 
       {/* Card */}

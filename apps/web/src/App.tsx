@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
@@ -31,6 +32,7 @@ function RootRoute() {
 }
 
 export default function App() {
+  useOfflineSync();
   return (
     <Suspense fallback={null}>
       <Routes>
