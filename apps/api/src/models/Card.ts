@@ -6,6 +6,8 @@ export interface ICard extends Document {
   userId: Types.ObjectId;
   front: string;
   back: string;
+  frontImage?: string;
+  backImage?: string;
   easeFactor: number;
   interval: number;
   repetitions: number;
@@ -20,6 +22,8 @@ const cardSchema = new mongoose.Schema<ICard>(
     userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
     front: { type: String, required: true },
     back: { type: String, required: true },
+    frontImage: { type: String, default: null },
+    backImage: { type: String, default: null },
     easeFactor: { type: Number, default: 2.5 },
     interval: { type: Number, default: 0 },
     repetitions: { type: Number, default: 0 },

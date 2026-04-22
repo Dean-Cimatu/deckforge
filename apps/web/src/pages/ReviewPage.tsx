@@ -180,10 +180,18 @@ export default function ReviewPage() {
               className="rounded-2xl border border-border bg-surface p-10 min-h-[240px] flex flex-col items-center justify-center text-center shadow-sm"
             >
               {flipped ? (
-                <p className="text-lg text-fg leading-relaxed">{current.back}</p>
+                <>
+                  <p className="text-lg text-fg leading-relaxed">{current.back}</p>
+                  {current.backImage && (
+                    <img src={current.backImage} alt="" className="mt-4 max-h-48 rounded-xl object-contain border border-border" />
+                  )}
+                </>
               ) : (
                 <>
                   <p className="font-serif text-2xl text-fg leading-snug">{current.front}</p>
+                  {current.frontImage && (
+                    <img src={current.frontImage} alt="" className="mt-4 max-h-48 rounded-xl object-contain border border-border" />
+                  )}
                   <p className="mt-6 text-xs text-muted">Space / click to reveal</p>
                 </>
               )}

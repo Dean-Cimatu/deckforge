@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MoreHorizontal, Pencil, Trash2, BookOpen, Brain, Plus } from 'lucide-react';
+import { ImagePicker } from '@/components/ImagePicker';
 import { useSource, useDeleteSource, usePatchSource, usePatchCard, useDeleteCard, useAddCard } from '@/hooks/useSources';
 import { SourceTypeBadge } from '@/components/SourceTypeBadge';
 import { Button } from '@/components/ui/button';
@@ -288,6 +289,8 @@ function CardRow({ card, sourceId }: { card: CardSchema; sourceId: string }) {
   const [editing, setEditing] = useState(false);
   const [front, setFront] = useState(card.front);
   const [back, setBack] = useState(card.back);
+  const [frontImage, setFrontImage] = useState<string | null>(card.frontImage ?? null);
+  const [backImage, setBackImage] = useState<string | null>(card.backImage ?? null);
   const { toast } = useToast();
   const patchCard = usePatchCard(sourceId);
   const deleteCard = useDeleteCard(sourceId);
@@ -295,7 +298,7 @@ function CardRow({ card, sourceId }: { card: CardSchema; sourceId: string }) {
   async function saveEdit() {
     if (!front.trim() || !back.trim()) return;
     try {
-      await patchCard.mutateAsync({ id: card.id, front: front.trim(), back: back.trim() });
+      await patchCard.mutateAsync({ id: card.id, front: front.trim(), back: back.trim(), frontImage, backImage });
       setEditing(false);
     } catch {
       toast({ title: 'Failed to save card', variant: 'destructive' });
@@ -324,6 +327,7 @@ function CardRow({ card, sourceId }: { card: CardSchema; sourceId: string }) {
               autoFocus
               className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-accent resize-none"
             />
+            <ImagePicker value={frontImage} onChange={setFrontImage} side="front" />
           </div>
           <div className="space-y-1">
             <span className="text-xs font-semibold uppercase tracking-widest text-muted">Definition</span>
@@ -333,11 +337,12 @@ function CardRow({ card, sourceId }: { card: CardSchema; sourceId: string }) {
               rows={3}
               className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-accent resize-none"
             />
+            <ImagePicker value={backImage} onChange={setBackImage} side="back" />
           </div>
         </div>
         <div className="flex gap-2">
           <Button size="sm" onClick={saveEdit} disabled={patchCard.isPending}>Save</Button>
-          <Button size="sm" variant="ghost" onClick={() => { setFront(card.front); setBack(card.back); setEditing(false); }}>Cancel</Button>
+          <Button size="sm" variant="ghost" onClick={() => { setFront(card.front); setBack(card.back); setFrontImage(card.frontImage ?? null); setBackImage(card.backImage ?? null); setEditing(false); }}>Cancel</Button>
         </div>
       </li>
     );
@@ -361,9 +366,17 @@ function CardRow({ card, sourceId }: { card: CardSchema; sourceId: string }) {
           <span className={`text-xs font-semibold uppercase tracking-widest flex-shrink-0 pt-0.5 w-16 ${flipped ? 'text-accent' : 'text-muted'}`}>
             {flipped ? 'Def' : 'Term'}
           </span>
-          <span className={`flex-1 leading-relaxed ${flipped ? 'text-sm text-fg' : 'font-serif text-base text-fg'}`}>
-            {flipped ? card.back : card.front}
-          </span>
+          <div className="flex-1 space-y-2">
+            <span className={`leading-relaxed ${flipped ? 'text-sm text-fg' : 'font-serif text-base text-fg'}`}>
+              {flipped ? card.back : card.front}
+            </span>
+            {flipped && card.backImage && (
+              <img src={card.backImage} alt="" className="max-h-32 rounded-lg object-contain border border-border" />
+            )}
+            {!flipped && card.frontImage && (
+              <img src={card.frontImage} alt="" className="max-h-32 rounded-lg object-contain border border-border" />
+            )}
+          </div>
         </motion.div>
       </AnimatePresence>
 
@@ -390,14 +403,18 @@ function AddCardRow({ deckId, sourceId }: { deckId: string; sourceId: string }) 
   const [open, setOpen] = useState(false);
   const [front, setFront] = useState('');
   const [back, setBack] = useState('');
+  const [frontImage, setFrontImage] = useState<string | null>(null);
+  const [backImage, setBackImage] = useState<string | null>(null);
   const { toast } = useToast();
   const addCard = useAddCard();
+
+  function reset() { setFront(''); setBack(''); setFrontImage(null); setBackImage(null); setOpen(false); }
 
   async function save() {
     if (!front.trim() || !back.trim()) return;
     try {
-      await addCard.mutateAsync({ deckId, front: front.trim(), back: back.trim() });
-      setFront(''); setBack(''); setOpen(false);
+      await addCard.mutateAsync({ deckId, front: front.trim(), back: back.trim(), frontImage, backImage });
+      reset();
     } catch {
       toast({ title: 'Failed to add card', variant: 'destructive' });
     }
@@ -427,6 +444,7 @@ function AddCardRow({ deckId, sourceId }: { deckId: string; sourceId: string }) 
             placeholder="Enter term"
             className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent resize-none"
           />
+          <ImagePicker value={frontImage} onChange={setFrontImage} side="front" />
         </div>
         <div className="space-y-1">
           <span className="text-xs font-semibold uppercase tracking-widest text-muted">Definition</span>
@@ -437,11 +455,12 @@ function AddCardRow({ deckId, sourceId }: { deckId: string; sourceId: string }) 
             placeholder="Enter definition"
             className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent resize-none"
           />
+          <ImagePicker value={backImage} onChange={setBackImage} side="back" />
         </div>
       </div>
       <div className="flex gap-2">
         <Button size="sm" onClick={save} disabled={addCard.isPending || !front.trim() || !back.trim()}>Add</Button>
-        <Button size="sm" variant="ghost" onClick={() => { setFront(''); setBack(''); setOpen(false); }}>Cancel</Button>
+        <Button size="sm" variant="ghost" onClick={reset}>Cancel</Button>
       </div>
     </li>
   );

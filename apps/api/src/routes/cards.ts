@@ -9,15 +9,32 @@ import { Deck } from '../models/Deck.js';
 export const cardsRouter: ExpressRouter = Router();
 cardsRouter.use(requireAuth);
 
+const MAX_IMAGE_BYTES = 400 * 1024; // 400 KB
+
+function validateImage(val: string | undefined): string | undefined {
+  if (!val) return undefined;
+  if (val.startsWith('http://') || val.startsWith('https://')) return val;
+  if (val.startsWith('data:image/')) {
+    const bytes = Buffer.byteLength(val, 'utf8');
+    if (bytes > MAX_IMAGE_BYTES) throw new Error(`Image too large (max 400 KB)`);
+    return val;
+  }
+  throw new Error('Invalid image value');
+}
+
 const CreateCardInput = z.object({
   deckId: z.string(),
   front: z.string().min(1),
   back: z.string().min(1),
+  frontImage: z.string().optional(),
+  backImage: z.string().optional(),
 });
 
 const PatchCardInput = z.object({
   front: z.string().min(1).optional(),
   back: z.string().min(1).optional(),
+  frontImage: z.string().nullable().optional(),
+  backImage: z.string().nullable().optional(),
 });
 
 // POST /api/cards
@@ -30,7 +47,14 @@ cardsRouter.post('/', async (req, res, next) => {
     const deck = await Deck.findOne({ _id: deckId, userId });
     if (!deck) { res.status(404).json({ error: 'Deck not found' }); return; }
 
-    const card = await Card.create({ deckId, userId, front: body.front, back: body.back });
+    const card = await Card.create({
+      deckId,
+      userId,
+      front: body.front,
+      back: body.back,
+      frontImage: validateImage(body.frontImage) ?? null,
+      backImage: validateImage(body.backImage) ?? null,
+    } as Parameters<typeof Card.create>[0]);
     await Deck.findByIdAndUpdate(deckId, { $inc: { cardCount: 1 } });
 
     res.status(201).json(card);
@@ -79,6 +103,8 @@ cardsRouter.patch('/:id', async (req, res, next) => {
     const updates: Record<string, unknown> = {};
     if (body.front !== undefined) updates.front = body.front;
     if (body.back !== undefined) updates.back = body.back;
+    if (body.frontImage !== undefined) updates.frontImage = body.frontImage === null ? null : validateImage(body.frontImage);
+    if (body.backImage !== undefined) updates.backImage = body.backImage === null ? null : validateImage(body.backImage);
 
     const card = await Card.findOneAndUpdate(
       { _id: cardId, userId },

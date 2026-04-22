@@ -167,21 +167,20 @@ export default function DeckStudyPage() {
               transition={{ duration: 0.18 }}
               className="rounded-2xl border border-border bg-surface shadow-sm min-h-[300px] flex flex-col items-center justify-center text-center p-10"
             >
-              {!flipped && (
-                <span className="mb-4 text-xs font-medium uppercase tracking-widest text-muted">
-                  Term
-                </span>
-              )}
-              {flipped && (
-                <span className="mb-4 text-xs font-medium uppercase tracking-widest text-accent">
-                  Definition
-                </span>
-              )}
+              <span className={`mb-4 text-xs font-medium uppercase tracking-widest ${flipped ? 'text-accent' : 'text-muted'}`}>
+                {flipped ? 'Definition' : 'Term'}
+              </span>
               <p className={`leading-relaxed text-fg ${flipped ? 'text-lg' : 'font-serif text-2xl'}`}>
                 {flipped ? current?.back : current?.front}
               </p>
+              {flipped && current?.backImage && (
+                <img src={current.backImage} alt="" className="mt-4 max-h-48 rounded-xl object-contain border border-border" />
+              )}
+              {!flipped && current?.frontImage && (
+                <img src={current.frontImage} alt="" className="mt-4 max-h-48 rounded-xl object-contain border border-border" />
+              )}
               {!flipped && (
-                <p className="mt-8 text-xs text-muted">Click or press Space to flip</p>
+                <p className="mt-6 text-xs text-muted">Click or press Space to flip</p>
               )}
             </motion.div>
           </AnimatePresence>

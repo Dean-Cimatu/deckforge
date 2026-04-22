@@ -118,8 +118,13 @@ export function useReviewCard() {
 export function usePatchCard(sourceId?: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, front, back }: { id: string; front?: string; back?: string }) =>
-      api.patch(`/cards/${id}`, { ...(front !== undefined && { front }), ...(back !== undefined && { back }) }),
+    mutationFn: ({ id, front, back, frontImage, backImage }: { id: string; front?: string; back?: string; frontImage?: string | null; backImage?: string | null }) =>
+      api.patch(`/cards/${id}`, {
+        ...(front !== undefined && { front }),
+        ...(back !== undefined && { back }),
+        ...(frontImage !== undefined && { frontImage }),
+        ...(backImage !== undefined && { backImage }),
+      }),
     onSuccess: () => {
       if (sourceId) qc.invalidateQueries({ queryKey: ['source', sourceId] });
       qc.invalidateQueries({ queryKey: ['deck-cards'] });
@@ -150,9 +155,9 @@ export function useCreateManualDeck() {
 export function useAddCard() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ deckId, front, back }: { deckId: string; front: string; back: string }) =>
-      api.post(`/cards`, { deckId, front, back }),
-    onSuccess: (_data, vars) => {
+    mutationFn: ({ deckId, front, back, frontImage, backImage }: { deckId: string; front: string; back: string; frontImage?: string | null; backImage?: string | null }) =>
+      api.post(`/cards`, { deckId, front, back, ...(frontImage ? { frontImage } : {}), ...(backImage ? { backImage } : {}) }),
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['deck-cards'] });
       qc.invalidateQueries({ queryKey: ['source'] });
     },

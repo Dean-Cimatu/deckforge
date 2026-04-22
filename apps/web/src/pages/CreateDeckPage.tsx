@@ -1,10 +1,11 @@
-import { useState, useRef, useId } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2 } from 'lucide-react';
 import { AppNav } from '@/components/AppNav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ImagePicker } from '@/components/ImagePicker';
 import { useCreateManualDeck } from '@/hooks/useSources';
 import { useToast } from '@/hooks/use-toast';
 import { useLang } from '@/i18n';
@@ -15,6 +16,8 @@ interface CardDraft {
   key: string;
   front: string;
   back: string;
+  frontImage?: string | null;
+  backImage?: string | null;
 }
 
 function emptyCard(): CardDraft {
@@ -32,7 +35,7 @@ export default function CreateDeckPage() {
   const [cards, setCards] = useState<CardDraft[]>([emptyCard(), emptyCard(), emptyCard()]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  function updateCard(key: string, field: 'front' | 'back', value: string) {
+  function updateCard(key: string, field: keyof Omit<CardDraft, 'key'>, value: string | null) {
     setCards((prev) => prev.map((c) => c.key === key ? { ...c, [field]: value } : c));
   }
 
@@ -53,7 +56,12 @@ export default function CreateDeckPage() {
     try {
       const result = await create.mutateAsync({
         title: title.trim(),
-        cards: validCards.map((c) => ({ front: c.front.trim(), back: c.back.trim() })),
+        cards: validCards.map((c) => ({
+          front: c.front.trim(),
+          back: c.back.trim(),
+          ...(c.frontImage ? { frontImage: c.frontImage } : {}),
+          ...(c.backImage ? { backImage: c.backImage } : {}),
+        })),
         language,
       });
       navigate(`/sources/${result.id}`);
@@ -152,7 +160,7 @@ export default function CreateDeckPage() {
 interface CardEditorProps {
   index: number;
   card: CardDraft;
-  onChange: (field: 'front' | 'back', value: string) => void;
+  onChange: (field: keyof Omit<CardDraft, 'key'>, value: string | null) => void;
   onDelete: () => void;
   canDelete: boolean;
 }
@@ -166,10 +174,7 @@ function CardEditor({ index, card, onChange, onDelete, canDelete }: CardEditorPr
       <div className="flex items-center justify-between px-5 py-3 border-b border-border">
         <span className="text-xs font-semibold text-muted tabular-nums">{index}</span>
         {canDelete && (
-          <button
-            onClick={onDelete}
-            className="p-1 rounded text-muted hover:text-warn transition-colors"
-          >
+          <button onClick={onDelete} className="p-1 rounded text-muted hover:text-warn transition-colors">
             <Trash2 className="h-4 w-4" />
           </button>
         )}
@@ -186,6 +191,7 @@ function CardEditor({ index, card, onChange, onDelete, canDelete }: CardEditorPr
             rows={3}
             className="w-full bg-transparent text-sm text-fg placeholder:text-muted resize-none focus:outline-none"
           />
+          <ImagePicker value={card.frontImage} onChange={(v) => onChange('frontImage', v)} side="front" />
         </div>
         <div className="p-4 space-y-1">
           <span className="text-xs font-semibold uppercase tracking-widest text-muted">Definition</span>
@@ -196,6 +202,7 @@ function CardEditor({ index, card, onChange, onDelete, canDelete }: CardEditorPr
             rows={3}
             className="w-full bg-transparent text-sm text-fg placeholder:text-muted resize-none focus:outline-none"
           />
+          <ImagePicker value={card.backImage} onChange={(v) => onChange('backImage', v)} side="back" />
         </div>
       </div>
     </div>

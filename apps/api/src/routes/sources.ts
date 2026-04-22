@@ -257,7 +257,7 @@ sourcesRouter.post('/manual', async (req, res, next) => {
     const title = (body.title?.trim()) || 'Untitled deck';
     const language = parseLanguage(body as Record<string, unknown>);
     const rawCards = Array.isArray(body.cards) ? body.cards : [];
-    const cards = rawCards.filter((c) => c.front?.trim() && c.back?.trim());
+    const cards = rawCards.filter((c: { front?: string; back?: string }) => c.front?.trim() && c.back?.trim());
 
     const userId = new mongoose.Types.ObjectId(req.user!.id);
     const source = await createSource(userId, { title, type: 'manual', language, inputMeta: {} });
@@ -271,11 +271,13 @@ sourcesRouter.post('/manual', async (req, res, next) => {
     });
 
     if (cards.length > 0) {
-      await Card.insertMany(cards.map((c) => ({
+      await Card.insertMany(cards.map((c: { front: string; back: string; frontImage?: string; backImage?: string }) => ({
         deckId: deck._id,
         userId,
         front: c.front.trim(),
         back: c.back.trim(),
+        ...(c.frontImage ? { frontImage: c.frontImage } : {}),
+        ...(c.backImage ? { backImage: c.backImage } : {}),
       })));
     }
 
