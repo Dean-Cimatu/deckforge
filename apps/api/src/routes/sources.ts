@@ -1,8 +1,8 @@
 import { Router, type Router as ExpressRouter } from 'express';
 import multer from 'multer';
 import mongoose from 'mongoose';
-import { CreateSourceTextInput, PatchSourceInput } from '@deckforge/shared';
-import type { OutputType } from '@deckforge/shared';
+import { CreateSourceTextInput, PatchSourceInput, LanguageCodeSchema } from '@deckforge/shared';
+import type { OutputType, LanguageCode } from '@deckforge/shared';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { generateRateLimit } from '../middleware/rateLimit.js';
 import { ingestText } from '../ingest/text.js';
@@ -39,10 +39,10 @@ sourcesRouter.post('/text', generateRateLimit, async (req, res, next) => {
     const { title, text } = ingestText({ ...(body.title !== undefined && { title: body.title }), text: body.text });
     const userId = new mongoose.Types.ObjectId(req.user!.id);
 
-    const source = await createSource(userId, { title, type: 'text', inputMeta: {} });
+    const source = await createSource(userId, { title, type: 'text', language: body.language, inputMeta: {} });
     await Source.findByIdAndUpdate(source._id, { extractedText: text });
 
-    generateArtefacts(source._id, text, body.outputs as OutputType[]).catch((err: unknown) => {
+    generateArtefacts(source._id, text, body.outputs as OutputType[], body.language).catch((err: unknown) => {
       console.error('generateArtefacts failed for source', source._id.toString(), err);
     });
 
@@ -66,6 +66,7 @@ sourcesRouter.post(
       }
       const title = (req.body as { title?: string }).title;
       const outputs: OutputType[] = parseOutputs(req.body);
+      const language = parseLanguage(req.body);
       const { title: derivedTitle, text, meta } = await ingestPdf(
         req.file.buffer,
         req.file.originalname,
@@ -75,11 +76,12 @@ sourcesRouter.post(
       const source = await createSource(userId, {
         title: derivedTitle,
         type: 'pdf',
+        language,
         inputMeta: { filename: req.file.originalname, pageCount: meta.pageCount as number },
       });
       await Source.findByIdAndUpdate(source._id, { extractedText: text });
 
-      generateArtefacts(source._id, text, outputs).catch((err: unknown) => {
+      generateArtefacts(source._id, text, outputs, language).catch((err: unknown) => {
         console.error('generateArtefacts failed for source', source._id.toString(), err);
       });
 
@@ -104,6 +106,7 @@ sourcesRouter.post(
       }
       const title = (req.body as { title?: string }).title;
       const outputs: OutputType[] = parseOutputs(req.body);
+      const language = parseLanguage(req.body);
       const { title: derivedTitle, text } = await ingestImage(
         req.file.buffer,
         req.file.mimetype,
@@ -114,11 +117,12 @@ sourcesRouter.post(
       const source = await createSource(userId, {
         title: derivedTitle,
         type: 'image',
+        language,
         inputMeta: { filename: req.file.originalname },
       });
       await Source.findByIdAndUpdate(source._id, { extractedText: text });
 
-      generateArtefacts(source._id, text, outputs).catch((err: unknown) => {
+      generateArtefacts(source._id, text, outputs, language).catch((err: unknown) => {
         console.error('generateArtefacts failed for source', source._id.toString(), err);
       });
 
@@ -133,22 +137,24 @@ sourcesRouter.post(
 
 sourcesRouter.post('/youtube', generateRateLimit, async (req, res, next) => {
   try {
-    const body = req.body as { title?: string; url?: string; outputs?: unknown };
+    const body = req.body as { title?: string; url?: string; outputs?: unknown; language?: unknown };
     if (!body.url || typeof body.url !== 'string') {
       res.status(400).json({ error: 'url is required' });
       return;
     }
     const outputs: OutputType[] = parseOutputs(body as Record<string, unknown>);
+    const language = parseLanguage(body as Record<string, unknown>);
     const { title, text, meta } = await ingestYoutube({ ...(body.title !== undefined && { title: body.title }), url: body.url });
     const userId = new mongoose.Types.ObjectId(req.user!.id);
     const source = await createSource(userId, {
       title,
       type: 'youtube',
+      language,
       inputMeta: { url: body.url, ...(meta as object) },
     });
     await Source.findByIdAndUpdate(source._id, { extractedText: text });
 
-    generateArtefacts(source._id, text, outputs).catch((err: unknown) => {
+    generateArtefacts(source._id, text, outputs, language).catch((err: unknown) => {
       console.error('generateArtefacts failed for source', source._id.toString(), err);
     });
 
@@ -166,22 +172,24 @@ sourcesRouter.post('/youtube', generateRateLimit, async (req, res, next) => {
 
 sourcesRouter.post('/url', generateRateLimit, async (req, res, next) => {
   try {
-    const body = req.body as { title?: string; url?: string; outputs?: unknown };
+    const body = req.body as { title?: string; url?: string; outputs?: unknown; language?: unknown };
     if (!body.url || typeof body.url !== 'string') {
       res.status(400).json({ error: 'url is required' });
       return;
     }
     const outputs: OutputType[] = parseOutputs(body as Record<string, unknown>);
+    const language = parseLanguage(body as Record<string, unknown>);
     const { title, text, meta } = await ingestUrl({ ...(body.title !== undefined && { title: body.title }), url: body.url });
     const userId = new mongoose.Types.ObjectId(req.user!.id);
     const source = await createSource(userId, {
       title,
       type: 'url',
+      language,
       inputMeta: { url: body.url, ...(meta as object) },
     });
     await Source.findByIdAndUpdate(source._id, { extractedText: text });
 
-    generateArtefacts(source._id, text, outputs).catch((err: unknown) => {
+    generateArtefacts(source._id, text, outputs, language).catch((err: unknown) => {
       console.error('generateArtefacts failed for source', source._id.toString(), err);
     });
 
@@ -215,16 +223,18 @@ sourcesRouter.post(
       }
       const title = (req.body as { title?: string }).title;
       const outputs: OutputType[] = parseOutputs(req.body);
+      const language = parseLanguage(req.body);
       const { title: derivedTitle, text, meta } = await ingestImages(files, title);
       const userId = new mongoose.Types.ObjectId(req.user!.id);
       const source = await createSource(userId, {
         title: derivedTitle,
         type: 'images',
+        language,
         inputMeta: { imageCount: meta.imageCount as number },
       });
       await Source.findByIdAndUpdate(source._id, { extractedText: text });
 
-      generateArtefacts(source._id, text, outputs).catch((err: unknown) => {
+      generateArtefacts(source._id, text, outputs, language).catch((err: unknown) => {
         console.error('generateArtefacts failed for source', source._id.toString(), err);
       });
 
@@ -319,4 +329,9 @@ function parseOutputs(body: Record<string, unknown>): OutputType[] {
     try { return JSON.parse(raw) as OutputType[]; } catch { /* fall through */ }
   }
   return ['flashcards', 'summary'];
+}
+
+function parseLanguage(body: Record<string, unknown>): LanguageCode {
+  const result = LanguageCodeSchema.safeParse(body.language);
+  return result.success ? result.data : 'original';
 }

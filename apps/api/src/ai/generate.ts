@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import type { Types } from 'mongoose';
-import type { OutputType } from '@deckforge/shared';
+import type { OutputType, LanguageCode } from '@deckforge/shared';
 import { anthropic, MODEL, MAX_TOKENS, TEXT_CHAR_LIMIT, TRUNCATION_PREFIX } from './client.js';
-import { SUMMARY_PROMPT, FLASHCARDS_PROMPT } from './prompts.js';
+import { SUMMARY_PROMPT, buildFlashcardsPrompt } from './prompts.js';
 import { Source } from '../models/Source.js';
 import { Deck } from '../models/Deck.js';
 import { Card } from '../models/Card.js';
@@ -35,14 +35,15 @@ export async function generateSummary(text: string): Promise<string> {
   return block.text.trim();
 }
 
-export async function generateFlashcards(text: string): Promise<z.infer<typeof RawCardSchema>> {
+export async function generateFlashcards(text: string, language: LanguageCode = 'original'): Promise<z.infer<typeof RawCardSchema>> {
   const content = truncate(text);
+  const systemPrompt = buildFlashcardsPrompt(language);
 
   const makeRequest = (messages: { role: 'user' | 'assistant'; content: string }[]) =>
     anthropic.messages.create({
       model: MODEL,
       max_tokens: MAX_TOKENS,
-      system: FLASHCARDS_PROMPT,
+      system: systemPrompt,
       messages,
     });
 
@@ -89,7 +90,8 @@ export async function generateFlashcards(text: string): Promise<z.infer<typeof R
 export async function generateArtefacts(
   sourceId: Types.ObjectId,
   text: string,
-  outputs: OutputType[]
+  outputs: OutputType[],
+  language: LanguageCode = 'original'
 ): Promise<void> {
   const source = await Source.findById(sourceId);
   if (!source) throw new GenerationError(`Source ${sourceId.toString()} not found`);
@@ -99,7 +101,7 @@ export async function generateArtefacts(
 
   const [summaryResult, cardsResult] = await Promise.allSettled([
     wantSummary ? generateSummary(text) : Promise.resolve(null),
-    wantCards ? generateFlashcards(text) : Promise.resolve(null),
+    wantCards ? generateFlashcards(text, language) : Promise.resolve(null),
   ]);
 
   const summary = summaryResult.status === 'fulfilled' ? summaryResult.value : null;

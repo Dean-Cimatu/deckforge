@@ -13,6 +13,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCreateSource } from '@/hooks/useSources';
 import { useToast } from '@/hooks/use-toast';
+import { useLang } from '@/i18n';
+import { SUPPORTED_LANGUAGES } from '@deckforge/shared';
+import type { LanguageCode } from '@deckforge/shared';
 
 interface Props {
   open: boolean;
@@ -22,6 +25,7 @@ interface Props {
 export function NewSourceModal({ open, onClose }: Props) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useLang();
   const create = useCreateSource();
 
   const [textTitle, setTextTitle] = useState('');
@@ -49,6 +53,8 @@ export function NewSourceModal({ open, onClose }: Props) {
   const [urlHref, setUrlHref] = useState('');
   const [urlOutputs, setUrlOutputs] = useState({ flashcards: true, summary: true });
 
+  const [language, setLanguage] = useState<LanguageCode>('original');
+
   function outputsArray(o: { flashcards: boolean; summary: boolean }) {
     const arr: string[] = [];
     if (o.flashcards) arr.push('flashcards');
@@ -62,6 +68,7 @@ export function NewSourceModal({ open, onClose }: Props) {
     setImgTitle(''); setImgFile(null); setImgFiles([]); setImgMultiple(false);
     setYtTitle(''); setYtUrl(''); setYtUrlError('');
     setUrlTitle(''); setUrlHref('');
+    setLanguage('original');
     onClose();
   }
 
@@ -72,7 +79,7 @@ export function NewSourceModal({ open, onClose }: Props) {
     try {
       const res = await create.mutateAsync({
         type: 'url',
-        body: { ...(urlTitle ? { title: urlTitle } : {}), url: urlHref, outputs: outputsArray(urlOutputs) },
+        body: { ...(urlTitle ? { title: urlTitle } : {}), url: urlHref, outputs: outputsArray(urlOutputs), language },
       });
       close();
       navigate(`/sources/${res.id}`);
@@ -95,6 +102,7 @@ export function NewSourceModal({ open, onClose }: Props) {
           ...(ytTitle ? { title: ytTitle } : {}),
           url: ytUrl,
           outputs: outputsArray(ytOutputs),
+          language,
         },
       });
       close();
@@ -114,6 +122,7 @@ export function NewSourceModal({ open, onClose }: Props) {
           title: textTitle || undefined,
           text: textBody,
           outputs: outputsArray(textOutputs),
+          language,
         },
       });
       close();
@@ -129,6 +138,7 @@ export function NewSourceModal({ open, onClose }: Props) {
     fd.append('file', pdfFile);
     if (pdfTitle) fd.append('title', pdfTitle);
     fd.append('outputs', JSON.stringify(outputsArray(pdfOutputs)));
+    fd.append('language', language);
     try {
       const res = await create.mutateAsync({ type: 'pdf', formData: fd });
       close();
@@ -146,6 +156,7 @@ export function NewSourceModal({ open, onClose }: Props) {
         imgFiles.forEach((f) => fd.append('files', f));
         if (imgTitle) fd.append('title', imgTitle);
         fd.append('outputs', JSON.stringify(outputsArray(imgOutputs)));
+        fd.append('language', language);
         const res = await create.mutateAsync({ type: 'images', formData: fd });
         close();
         navigate(`/sources/${res.id}`);
@@ -155,6 +166,7 @@ export function NewSourceModal({ open, onClose }: Props) {
         fd.append('file', imgFile);
         if (imgTitle) fd.append('title', imgTitle);
         fd.append('outputs', JSON.stringify(outputsArray(imgOutputs)));
+        fd.append('language', language);
         const res = await create.mutateAsync({ type: 'image', formData: fd });
         close();
         navigate(`/sources/${res.id}`);
@@ -172,6 +184,22 @@ export function NewSourceModal({ open, onClose }: Props) {
         <DialogHeader>
           <DialogTitle>New source</DialogTitle>
         </DialogHeader>
+
+        {/* Flashcard language — shared across all tabs */}
+        <div className="mt-4 space-y-1">
+          <Label htmlFor="card-lang">{t.modal.flashcardLanguage}</Label>
+          <select
+            id="card-lang"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as LanguageCode)}
+            className="mt-1 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-accent"
+          >
+            {SUPPORTED_LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>{l.label}</option>
+            ))}
+          </select>
+          <p className="text-xs text-muted">{t.modal.languageHint}</p>
+        </div>
 
         <Tabs defaultValue="text" className="mt-2">
           <TabsList className="w-full">

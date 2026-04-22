@@ -1,11 +1,12 @@
 import mongoose, { type Document, type Types } from 'mongoose';
-import type { SourceType, SourceStatus } from '@deckforge/shared';
+import type { SourceType, SourceStatus, LanguageCode } from '@deckforge/shared';
 
 export interface ISource extends Document {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
   title: string;
   type: SourceType;
+  language: LanguageCode;
   inputMeta: {
     filename?: string;
     url?: string;
@@ -28,6 +29,12 @@ const sourceSchema = new mongoose.Schema<ISource>(
       type: String,
       required: true,
       enum: ['text', 'pdf', 'image', 'images', 'youtube', 'url'],
+    },
+    language: {
+      type: String,
+      required: true,
+      enum: ['original', 'en', 'ar', 'tr', 'de', 'ru'],
+      default: 'original',
     },
     inputMeta: {
       filename: String,

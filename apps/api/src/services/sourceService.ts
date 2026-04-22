@@ -1,5 +1,5 @@
 import type { Types } from 'mongoose';
-import type { SourceType } from '@deckforge/shared';
+import type { SourceType, LanguageCode } from '@deckforge/shared';
 import { Source, type ISource } from '../models/Source.js';
 import { Deck } from '../models/Deck.js';
 import { Card } from '../models/Card.js';
@@ -11,6 +11,7 @@ export async function createSource(
   data: {
     title: string;
     type: SourceType;
+    language?: LanguageCode;
     inputMeta?: ISource['inputMeta'];
   }
 ): Promise<ISource> {
@@ -18,6 +19,7 @@ export async function createSource(
     userId,
     title: data.title,
     type: data.type,
+    language: data.language ?? 'original',
     inputMeta: data.inputMeta ?? {},
     status: 'processing',
   });

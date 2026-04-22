@@ -1,5 +1,16 @@
 import { z } from 'zod';
 
+export const SUPPORTED_LANGUAGES = [
+  { code: 'original', label: 'Same as source' },
+  { code: 'en', label: 'English' },
+  { code: 'ar', label: 'العربية (Arabic)' },
+  { code: 'tr', label: 'Türkçe (Turkish)' },
+  { code: 'de', label: 'Deutsch (German)' },
+  { code: 'ru', label: 'Русский (Russian)' },
+] as const;
+
+export type LanguageCode = typeof SUPPORTED_LANGUAGES[number]['code'];
+
 export const SourceType = z.enum(['text', 'pdf', 'image', 'images', 'youtube', 'url']);
 export const SourceStatus = z.enum(['processing', 'ready', 'partial', 'failed']);
 export const OutputType = z.enum(['flashcards', 'summary']);
@@ -34,11 +45,14 @@ export const DeckSchema = z.object({
   createdAt: z.coerce.date(),
 });
 
+export const LanguageCodeSchema = z.enum(['original', 'en', 'ar', 'tr', 'de', 'ru']);
+
 export const SourceSchema = z.object({
   id: z.string(),
   userId: z.string(),
   title: z.string(),
   type: SourceType,
+  language: LanguageCodeSchema.default('original'),
   inputMeta: z.object({
     filename: z.string().optional(),
     url: z.string().optional(),
@@ -55,22 +69,27 @@ export const SourceSchema = z.object({
 
 // ── Input schemas ─────────────────────────────────────────────────────────────
 
+const languageField = { language: LanguageCodeSchema.default('original') };
+
 export const CreateSourceTextInput = z.object({
   title: z.string().optional(),
   text: z.string().min(1, 'Text cannot be empty').max(500_000),
   outputs: z.array(OutputType).min(1).default(['flashcards', 'summary']),
+  ...languageField,
 });
 
 export const CreateSourceYoutubeInput = z.object({
   title: z.string().optional(),
   url: z.string().url(),
   outputs: z.array(OutputType).min(1).default(['flashcards', 'summary']),
+  ...languageField,
 });
 
 export const CreateSourceUrlInput = z.object({
   title: z.string().optional(),
   url: z.string().url(),
   outputs: z.array(OutputType).min(1).default(['flashcards', 'summary']),
+  ...languageField,
 });
 
 export const PatchSourceInput = z.object({

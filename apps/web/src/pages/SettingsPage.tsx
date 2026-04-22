@@ -6,6 +6,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useApiKeys, useCreateApiKey, useDeleteApiKey } from '@/hooks/useApiKeys';
 import { useToast } from '@/hooks/use-toast';
 import { relativeTime } from '@/lib/relativeTime';
+import { useLang, type LocaleKey } from '@/i18n';
+import { LOCALES } from '@/i18n/locales';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +16,16 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
+const LOCALE_LABELS: Record<LocaleKey, string> = {
+  en: 'English',
+  ar: 'العربية (Arabic)',
+  tr: 'Türkçe (Turkish)',
+  de: 'Deutsch (German)',
+  ru: 'Русский (Russian)',
+};
+
 export default function SettingsPage() {
+  const { t, locale, setLocale } = useLang();
   const { data: keys, isLoading } = useApiKeys();
   const createKey = useCreateApiKey();
   const deleteKey = useDeleteApiKey();
@@ -57,6 +68,27 @@ export default function SettingsPage() {
       <AppNav />
       <div className="max-w-2xl mx-auto px-6 py-12">
         <h1 className="font-serif text-4xl text-fg">Settings</h1>
+
+        {/* Interface Language */}
+        <section className="mt-12">
+          <h2 className="font-serif text-2xl text-fg">{t.settings.uiLanguage}</h2>
+          <p className="mt-2 text-sm text-muted">{t.settings.uiLanguageDesc}</p>
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {(Object.keys(LOCALES) as LocaleKey[]).map((key) => (
+              <button
+                key={key}
+                onClick={() => setLocale(key)}
+                className={`rounded-xl border px-4 py-3 text-sm text-left transition-colors ${
+                  locale === key
+                    ? 'border-accent bg-accent/10 text-accent font-medium'
+                    : 'border-border bg-surface text-fg hover:border-accent/50'
+                }`}
+              >
+                {LOCALE_LABELS[key]}
+              </button>
+            ))}
+          </div>
+        </section>
 
         {/* API Keys */}
         <section className="mt-12">

@@ -2,11 +2,13 @@ import { Link, useLocation } from 'react-router-dom';
 import { BookOpen, Library, Moon, Sun, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
+import { useLang } from '@/i18n';
 import { Button } from '@/components/ui/button';
 
 export function AppNav() {
   const { logout } = useAuth();
   const { theme, toggle } = useTheme();
+  const { t } = useLang();
   const location = useLocation();
 
   function navClass(path: string) {
@@ -20,10 +22,10 @@ export function AppNav() {
         <Link to="/" className="font-serif text-lg font-semibold text-fg">DeckForge</Link>
         <nav className="flex items-center gap-4">
           <Link to="/" className={navClass('/')}>
-            <span className="flex items-center gap-1.5"><BookOpen className="h-4 w-4" />Home</span>
+            <span className="flex items-center gap-1.5"><BookOpen className="h-4 w-4" />{t.nav.home}</span>
           </Link>
           <Link to="/sources" className={navClass('/sources')}>
-            <span className="flex items-center gap-1.5"><Library className="h-4 w-4" />Library</span>
+            <span className="flex items-center gap-1.5"><Library className="h-4 w-4" />{t.nav.sources}</span>
           </Link>
         </nav>
         <div className="ml-auto flex items-center gap-2">
