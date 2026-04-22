@@ -24,15 +24,21 @@ RUN pnpm --filter @deckforge/api build
 
 # ── Stage 3: runtime ──────────────────────────────────────────────────────────
 FROM node:20-alpine AS runtime
+RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# esbuild bundles everything; copy dist + any native .node addons that were excluded
+# Copy the bundle
 COPY --from=build /app/apps/api/dist ./dist
-COPY --from=build /app/apps/api/package.json ./package.json
-# Carry node_modules for any native .node files excluded from the bundle
-COPY --from=build /app/node_modules ./node_modules
+
+# Install only production deps for external packages (jsdom, canvas, etc.)
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build /app/apps/api/package.json ./apps/api/package.json
+COPY --from=build /app/packages/shared/package.json ./packages/shared/package.json
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 EXPOSE 3000
 

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.cjs --external:*.node --external:jsdom --external:canvas --external:pdf-parse",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.cjs --external:*.node --external:jsdom --external:canvas",
     "start": "node dist/index.cjs",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
