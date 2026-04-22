@@ -3,7 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MoreHorizontal, Pencil, Trash2, BookOpen, Brain } from 'lucide-react';
 import { useSource, useDeleteSource, usePatchSource } from '@/hooks/useSources';
 import { SourceTypeBadge } from '@/components/SourceTypeBadge';
 import { Button } from '@/components/ui/button';
@@ -216,17 +217,40 @@ export default function SourceDetailPage() {
 
           {/* Flashcards tab */}
           <TabsContent value="flashcards">
-            <div className="sticky top-0 z-10 flex items-center justify-between bg-bg py-3 border-b border-border">
-              <span className="text-sm font-medium text-fg">{cards.length} cards</span>
-            </div>
             {cards.length === 0 ? (
               <p className="mt-4 text-sm text-muted">No flashcards generated.</p>
             ) : (
-              <ul className="divide-y divide-border">
-                {cards.map((card) => (
-                  <CardRow key={card.id} card={card} sourceId={id!} />
-                ))}
-              </ul>
+              <>
+                {/* Study CTAs */}
+                <div className="mt-4 flex items-center gap-3">
+                  <Link
+                    to={`/deck/${deck?.id}/study`}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl border-2 border-accent bg-accent/5 px-4 py-3 text-sm font-medium text-accent hover:bg-accent/10 transition-colors"
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    Flashcards
+                  </Link>
+                  <Link
+                    to={`/review?deckId=${deck?.id}`}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium text-fg hover:border-accent transition-colors"
+                  >
+                    <Brain className="h-4 w-4" />
+                    Spaced review
+                  </Link>
+                </div>
+
+                {/* Card count */}
+                <p className="mt-6 mb-3 text-xs font-semibold uppercase tracking-widest text-muted">
+                  {cards.length} cards
+                </p>
+
+                {/* Card list */}
+                <ul className="space-y-2">
+                  {cards.map((card) => (
+                    <CardRow key={card.id} card={card} sourceId={id!} />
+                  ))}
+                </ul>
+              </>
             )}
           </TabsContent>
         </Tabs>
@@ -255,26 +279,28 @@ export default function SourceDetailPage() {
 }
 
 function CardRow({ card }: { card: CardSchema; sourceId: string }) {
+  const [flipped, setFlipped] = useState(false);
   const [editing, setEditing] = useState(false);
   const [front, setFront] = useState(card.front);
   const [back, setBack] = useState(card.back);
 
   if (editing) {
     return (
-      <li className="py-4 space-y-2">
+      <li className="rounded-xl border border-accent bg-surface p-4 space-y-3">
         <textarea
           value={front}
           onChange={(e) => setFront(e.target.value)}
           rows={2}
-          className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-accent resize-none"
-          placeholder="Front"
+          autoFocus
+          className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+          placeholder="Front (term)"
         />
         <textarea
           value={back}
           onChange={(e) => setBack(e.target.value)}
           rows={2}
-          className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-accent resize-none"
-          placeholder="Back"
+          className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+          placeholder="Back (definition)"
         />
         <div className="flex gap-2">
           <Button size="sm" onClick={() => setEditing(false)}>Save</Button>
@@ -285,17 +311,35 @@ function CardRow({ card }: { card: CardSchema; sourceId: string }) {
   }
 
   return (
-    <li className="group flex items-start justify-between gap-4 py-4">
-      <span className="font-serif text-lg font-medium text-fg flex-1">{card.front}</span>
-      <span className="text-base text-muted max-w-lg flex-1">{card.back}</span>
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-        <button
-          onClick={() => setEditing(true)}
-          className="p-1 rounded text-muted hover:text-fg transition-colors"
+    <li
+      className="group relative rounded-xl border border-border bg-surface cursor-pointer hover:border-accent/50 transition-colors overflow-hidden"
+      onClick={() => setFlipped((f) => !f)}
+      style={{ perspective: 800 }}
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={flipped ? 'back' : 'front'}
+          initial={{ rotateX: flipped ? -90 : 90, opacity: 0 }}
+          animate={{ rotateX: 0, opacity: 1 }}
+          exit={{ rotateX: flipped ? 90 : -90, opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="flex items-start gap-4 px-5 py-4 min-h-[72px]"
         >
-          <Pencil className="h-4 w-4" />
-        </button>
-      </div>
+          <span className={`text-xs font-semibold uppercase tracking-widest flex-shrink-0 pt-0.5 w-16 ${flipped ? 'text-accent' : 'text-muted'}`}>
+            {flipped ? 'Def' : 'Term'}
+          </span>
+          <span className={`flex-1 leading-relaxed ${flipped ? 'text-sm text-fg' : 'font-serif text-base text-fg'}`}>
+            {flipped ? card.back : card.front}
+          </span>
+        </motion.div>
+      </AnimatePresence>
+
+      <button
+        onClick={(e) => { e.stopPropagation(); setEditing(true); }}
+        className="absolute right-3 top-3 p-1 rounded text-muted opacity-0 group-hover:opacity-100 hover:text-fg transition-all"
+      >
+        <Pencil className="h-3.5 w-3.5" />
+      </button>
     </li>
   );
 }

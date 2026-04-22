@@ -11,6 +11,7 @@ const SourceDetailPage = lazy(() => import('@/pages/SourceDetailPage'));
 const LibraryPage = lazy(() => import('@/pages/LibraryPage'));
 const ReviewPage = lazy(() => import('@/pages/ReviewPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
+const DeckStudyPage = lazy(() => import('@/pages/DeckStudyPage'));
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -74,6 +75,14 @@ export default function App() {
           element={
             <RequireAuth>
               <ReviewPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/deck/:deckId/study"
+          element={
+            <RequireAuth>
+              <DeckStudyPage />
             </RequireAuth>
           }
         />

@@ -82,6 +82,19 @@ export interface ReviewQueueResponse {
   total: number;
 }
 
+export interface DeckCardsResponse {
+  deck: DeckSchema;
+  cards: CardSchema[];
+}
+
+export function useDeckCards(deckId: string | undefined) {
+  return useQuery<DeckCardsResponse>({
+    queryKey: ['deck-cards', deckId],
+    queryFn: () => api.get<DeckCardsResponse>(`/decks/${deckId}/cards`),
+    enabled: Boolean(deckId),
+  });
+}
+
 export function useReviewQueue(deckId?: string) {
   const qs = deckId ? `?deckId=${deckId}` : '';
   return useQuery<ReviewQueueResponse>({
