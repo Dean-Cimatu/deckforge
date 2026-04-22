@@ -44,6 +44,8 @@ export const DeckSchema = z.object({
   userId: z.string(),
   title: z.string(),
   cardCount: z.number().int().default(0),
+  isPublic: z.boolean().default(false),
+  shareId: z.string().nullable().optional(),
   createdAt: z.coerce.date(),
 });
 

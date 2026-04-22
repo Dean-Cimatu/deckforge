@@ -4,8 +4,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoreHorizontal, Pencil, Trash2, BookOpen, Brain, Plus } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, BookOpen, Brain, Plus, Share2, Check, Copy } from 'lucide-react';
 import { ImagePicker } from '@/components/ImagePicker';
+import { useShareDeck, useUnshareDeck } from '@/hooks/useSources';
 import { useSource, useDeleteSource, usePatchSource, usePatchCard, useDeleteCard, useAddCard } from '@/hooks/useSources';
 import { SourceTypeBadge } from '@/components/SourceTypeBadge';
 import { Button } from '@/components/ui/button';
@@ -240,6 +241,9 @@ export default function SourceDetailPage() {
                   </Link>
                 </div>
 
+                {/* Share */}
+                {deck && <SharePanel deck={deck} sourceId={id!} />}
+
                 {/* Card count */}
                 <p className="mt-6 mb-3 text-xs font-semibold uppercase tracking-widest text-muted">
                   {cards.length} {cards.length === 1 ? 'card' : 'cards'}
@@ -463,6 +467,80 @@ function AddCardRow({ deckId, sourceId }: { deckId: string; sourceId: string }) 
         <Button size="sm" variant="ghost" onClick={reset}>Cancel</Button>
       </div>
     </li>
+  );
+}
+
+function SharePanel({ deck, sourceId }: { deck: import('@deckforge/shared').DeckSchema; sourceId: string }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const shareDeck = useShareDeck(sourceId);
+  const unshareDeck = useUnshareDeck(sourceId);
+  const { toast } = useToast();
+
+  const shareUrl = deck.shareId ? `${window.location.origin}/s/${deck.shareId}` : null;
+
+  async function handleToggle() {
+    try {
+      if (deck.isPublic) {
+        await unshareDeck.mutateAsync(deck.id);
+      } else {
+        await shareDeck.mutateAsync(deck.id);
+        setOpen(true);
+      }
+    } catch {
+      toast({ title: 'Failed to update sharing', variant: 'destructive' });
+    }
+  }
+
+  async function copy() {
+    if (!shareUrl) return;
+    await navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className="mt-3 rounded-xl border border-border bg-surface p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Share2 className="h-4 w-4 text-muted" />
+          <span className="text-sm font-medium text-fg">Share</span>
+          {deck.isPublic && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 font-medium">
+              Public
+            </span>
+          )}
+        </div>
+        <button
+          onClick={handleToggle}
+          disabled={shareDeck.isPending || unshareDeck.isPending}
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${deck.isPublic ? 'bg-accent' : 'bg-border'}`}
+        >
+          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${deck.isPublic ? 'translate-x-4' : 'translate-x-0.5'}`} />
+        </button>
+      </div>
+
+      {deck.isPublic && shareUrl && (
+        <div className="mt-3">
+          {!open ? (
+            <button onClick={() => setOpen(true)} className="text-xs text-accent hover:underline">
+              View link
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-bg px-3 py-2">
+              <span className="flex-1 text-xs text-muted font-mono truncate">{shareUrl}</span>
+              <button onClick={copy} className="flex-shrink-0 text-muted hover:text-fg transition-colors">
+                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!deck.isPublic && (
+        <p className="mt-1 text-xs text-muted">Anyone with the link can view and study this deck.</p>
+      )}
+    </div>
   );
 }
 

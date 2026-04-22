@@ -12,6 +12,7 @@ import { cardsRouter } from './routes/cards.js';
 import { decksRouter } from './routes/decks.js';
 import { apiKeysRouter } from './routes/apiKeys.js';
 import { v1Router } from './routes/v1.js';
+import { shareRouter } from './routes/share.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -33,6 +34,7 @@ app.use('/api/cards', cardsRouter);
 app.use('/api/decks', decksRouter);
 app.use('/api/keys', apiKeysRouter);
 app.use('/api/v1', v1Router);
+app.use('/api/share', shareRouter);
 app.use(errorHandler);
 
 connectDB()

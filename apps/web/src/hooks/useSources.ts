@@ -164,6 +164,30 @@ export function useAddCard() {
   });
 }
 
+export function useShareDeck(sourceId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (deckId: string) => api.post<{ shareId: string; isPublic: boolean }>(`/share/${deckId}`, {}),
+    onSuccess: () => { if (sourceId) qc.invalidateQueries({ queryKey: ['source', sourceId] }); },
+  });
+}
+
+export function useUnshareDeck(sourceId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (deckId: string) => api.delete<{ isPublic: boolean }>(`/share/${deckId}`),
+    onSuccess: () => { if (sourceId) qc.invalidateQueries({ queryKey: ['source', sourceId] }); },
+  });
+}
+
+export function usePublicDeck(shareId: string | undefined) {
+  return useQuery<{ deck: { id: string; title: string; cardCount: number; shareId: string; language: string; createdAt: string }; cards: { id: string; front: string; back: string; frontImage?: string | null; backImage?: string | null }[] }>({
+    queryKey: ['public-deck', shareId],
+    queryFn: () => api.get(`/share/${shareId}`),
+    enabled: Boolean(shareId),
+  });
+}
+
 export function useCreateSource() {
   const qc = useQueryClient();
   return useMutation({

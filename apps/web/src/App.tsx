@@ -13,6 +13,7 @@ const ReviewPage = lazy(() => import('@/pages/ReviewPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 const DeckStudyPage = lazy(() => import('@/pages/DeckStudyPage'));
 const CreateDeckPage = lazy(() => import('@/pages/CreateDeckPage'));
+const SharedDeckPage = lazy(() => import('@/pages/SharedDeckPage'));
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -103,6 +104,7 @@ export default function App() {
             </RequireAuth>
           }
         />
+        <Route path="/s/:shareId" element={<SharedDeckPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

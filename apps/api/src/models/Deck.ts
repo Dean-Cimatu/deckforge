@@ -6,6 +6,8 @@ export interface IDeck extends Document {
   userId: Types.ObjectId;
   title: string;
   cardCount: number;
+  isPublic: boolean;
+  shareId: string | null;
   createdAt: Date;
 }
 
@@ -15,10 +17,13 @@ const deckSchema = new mongoose.Schema<IDeck>(
     userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
     title: { type: String, required: true },
     cardCount: { type: Number, default: 0, min: 0 },
+    isPublic: { type: Boolean, default: false },
+    shareId: { type: String, default: null, sparse: true },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
 deckSchema.index({ userId: 1 });
+deckSchema.index({ shareId: 1 }, { sparse: true });
 
 export const Deck = mongoose.model<IDeck>('Deck', deckSchema);
