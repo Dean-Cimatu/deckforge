@@ -10,9 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy API
-        if: ${{ secrets.RENDER_DEPLOY_HOOK_API != '' }}
-        run: curl -fsS "${{ secrets.RENDER_DEPLOY_HOOK_API }}"
+        if: ${{ env.HOOK != '' }}
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_API }}
+        run: curl -fsS "$HOOK"
 
       - name: Deploy Web
-        if: ${{ secrets.RENDER_DEPLOY_HOOK_WEB != '' }}
-        run: curl -fsS "${{ secrets.RENDER_DEPLOY_HOOK_WEB }}"
+        if: ${{ env.HOOK != '' }}
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_WEB }}
+        run: curl -fsS "$HOOK"
